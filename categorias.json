@@ -1,0 +1,7 @@
+{
+    "padrao_despesa": ["Alimentação", "Transporte", "Saúde", "Lazer"],
+    "nova_despesa": [],
+    "padrao_receita": ["Salário", "Dividendos", "Empréstimo"],
+    "nova_receita": [],
+    "editar": ["Editar categorias"]
+  }

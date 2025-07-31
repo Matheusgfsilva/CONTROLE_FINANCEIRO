@@ -1,0 +1,30 @@
+[
+     {
+          "type": "Receita",
+          "value": "R$1.234,00",
+          "category": "Sal\u00e1rio",
+          "discription": "PRIMO RICO",
+          "date": "2025-07-31"
+     },
+     {
+          "type": "Receita",
+          "value": "R$90,00",
+          "category": "Empr\u00e9stimo",
+          "discription": "pao",
+          "date": "2025-07-31"
+     },
+     {
+          "type": "Receita",
+          "value": "R$1.000,00",
+          "category": "Sal\u00e1rio",
+          "discription": "mesada",
+          "date": "2025-07-31"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$250,00",
+          "category": "Empr\u00e9stimo",
+          "discription": "Emprestei pra ferreira",
+          "date": "2025-07-31"
+     }
+]
