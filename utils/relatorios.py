@@ -17,8 +17,4 @@ def balance():
     balance = f"R${float(balance):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     print(balance)
 
-def relatory():
-    print("-" * 26)
-    print("   RELATÓRIO FINANCEIRO")
-    print("-" * 26, "\n")
-    print(f"Saldo atual: ", end=""), balance()
+print("OI")
