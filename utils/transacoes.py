@@ -1,5 +1,5 @@
-from utils.classificacao import categorize_rev
-from utils.arquivos import db_add, db_confirm
+from utils.classificacao import categorize_rev, categorize_exp
+from utils.arquivos import db_add, db_confirm, new_db
 from utils.verifiers import value_verf, month_verf, type_verf, date_verf
 from utils.trans_class import Transaction
 import datetime
@@ -29,7 +29,7 @@ def expense():
     value = input("Valor: ").strip()
     value = value_verf(value)
 
-    categorie = categorize_rev()
+    categorie = categorize_exp()
 
     discription = input("Descrição: ").strip().capitalize()
     
@@ -91,8 +91,7 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                 new_trans.append(mon)
                 print(new_trans) 
         
-        with open(DB_PATH, "w") as file: #"w" de write, voce esta apagando o conteudo anterior
-            json.dump(new_trans, file, indent=5) #passando a lista nova para o json
+        new_db(DB_PATH, new_trans)
 
     elif mon_exist == False:
         print("Não há nenhuma transação registrada nesse mês!", end="")
@@ -108,8 +107,7 @@ def deleteall():
     while True:
         if confirm == "S":
             trans_empty = []
-            with open(DB_PATH, "w") as file:
-                json.dump(trans_empty, file)
+            new_db(DB_PATH, trans_empty)
             print("Transações deletadas!")
             break
         elif confirm == "N":

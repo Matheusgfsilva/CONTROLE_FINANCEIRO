@@ -26,5 +26,19 @@
           "category": "Empr\u00e9stimo",
           "discription": "Emprestei pra ferreira",
           "date": "2025-07-31"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$1.000,00",
+          "category": "Lazer",
+          "discription": "Namorada",
+          "date": "2025-08-04"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$74,00",
+          "category": "Sa\u00fade",
+          "discription": "Remedios",
+          "date": "2025-08-04"
      }
 ]

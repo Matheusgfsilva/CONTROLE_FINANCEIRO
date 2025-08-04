@@ -1,5 +1,6 @@
 from utils.transacoes import revenue, expense, edit_trans, deleteall
 from utils.relatorios import balance
+from utils.classificacao import edit_cat
 
 while True:
     print("\n========= CONTROLE FINANCEIRO =========")
@@ -10,7 +11,8 @@ while True:
     print("[4] EDITAR TRANSAÇÃO")
     print("[5] PROCURAR TRANSAÇÃO")
     print("[6] DELETAR TODAS TRANSAÇÕES")
-    choice = input("Digite: ")
+    print("[7] EDITAR CATEGORIAS")
+    choice = input("Digite: ").strip()
 
     if choice == "1":
         revenue()
@@ -25,7 +27,7 @@ while True:
     elif choice == "6":
         deleteall()
     elif choice == "7":
-        print("7")
+        edit_cat()
     elif not choice:
         print("O campo não pode ficar vazio")
     else:
