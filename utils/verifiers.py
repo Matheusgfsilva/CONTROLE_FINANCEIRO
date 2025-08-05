@@ -22,13 +22,34 @@ def value_verf(val):
 
         val = input("Valor: ")
 
+def value_verf_float(val):
+    while True:
+        val = str(val).replace(",", ".").strip()
+
+        # Verifica se há mais de um ponto
+        if val.count(".") > 1:
+            print("Número inválido: não use mais de um ponto decimal.")
+        elif not val:
+            print("O campo não pode ficar vazio!")
+        else:
+            try:
+                numero = float(val)
+                if numero < 0:
+                    print("Digite um número positivo!")
+                else:
+                    return float(val)
+            except ValueError:
+                print("Digite um valor numérico válido!")
+
+        val = input("Valor: ")
+
 def month_verf():
     while True:
         mon = input("Digite o mês que a transação foi feita(1=janeiro...): ").strip() 
         if not mon:
             print("O campo não pode ficar vazio!")
         elif not re.fullmatch(r"[0-9]+", mon):
-            print("Digite somente números!")
+            print("Digite somente números inteiros!")
         elif not (int(mon) >= 1 and int(mon) <= 12 and int(mon) > 0):
             print("Digite um número que corresponda á um mês!")
         else:
@@ -46,9 +67,9 @@ def type_verf():
         else:
             return type
      
-def date_verf():
+def date_verf(date):
     while True:
-        date = input("Digite a nova data(YYYY-MM-DD): ")
+        print("Data: ")
         if not date:
             print("O campo não pode ficar vazio!")
         elif not re.fullmatch(r"[0-9 /-]+", date):

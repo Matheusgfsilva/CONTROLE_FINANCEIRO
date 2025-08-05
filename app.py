@@ -1,4 +1,4 @@
-from utils.transacoes import revenue, expense, edit_trans, deleteall
+from utils.transacoes import revenue, expense, edit_trans, deleteall, find_trans
 from utils.relatorios import balance
 from utils.classificacao import edit_cat
 
@@ -23,7 +23,7 @@ while True:
     elif choice == "4":
         edit_trans()
     elif choice == "5":
-        print("5")
+        find_trans()
     elif choice == "6":
         deleteall()
     elif choice == "7":

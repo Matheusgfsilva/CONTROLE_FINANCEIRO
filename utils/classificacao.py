@@ -63,6 +63,7 @@ def edit_cat():
                 print("Escolha entre o número 1 e 2!")
             else:
                 break
+    
 
         if trans_type == "1":
             for i, category in enumerate(categories_rev, 1):
@@ -76,7 +77,7 @@ def edit_cat():
             new_db(REV_PATH, edited_cat)
             return
         
-        if trans_type == "2":
+        elif trans_type == "2":
             for i, category in enumerate(categories_exp, 1):
                 print(f"[{i}] {category}")
 
@@ -87,9 +88,49 @@ def edit_cat():
             new_db(EXP_PATH, edited_cat)
             return
 
+        else:
+            print("Digite uma das opções(1 ou 2)!")
+
     elif choice == "2":
-        print("2")
-        
+        while True:
+            trans_type = input("Você quer adicionar uma categoria de RECEITA(1) ou DESPESA(2): ").strip()
+            if not choice:
+                print("O campo não pode ficar vazio!")
+            elif not re.fullmatch(r"[1-9]+", choice):
+                print("Digite somente números!")
+            elif choice != "1" and choice != "2":
+                print("Escolha entre o número 1 e 2!")
+            else:
+                break
+        if trans_type == "1":
+            for category in categories_rev:
+                edited_cat.append(category)
+            while True:
+                new_cat = input("Digite o nome da nova categoria que você deseja: ").strip()
+                if not new_cat:
+                    print("O campo não pode ficar vazio!")
+                elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", new_cat):
+                    print("Digite somente letras!")
+                else:
+                    break 
+            edited_cat.append(new_cat)
+            new_db(REV_PATH,edited_cat)
+            
+        elif trans_type == "2":
+            for category in categories_exp:
+                edited_cat.append(category)
+            while True:
+                new_cat = input("Digite o nome da nova categoria que você deseja: ").strip()
+                if not new_cat:
+                    print("O campo não pode ficar vazio!")
+                elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", new_cat):
+                    print("Digite somente letras!")
+                else:
+                    break 
+            edited_cat.append(new_cat)
+            new_db(EXP_PATH,edited_cat)
+    
+
     
 
 
