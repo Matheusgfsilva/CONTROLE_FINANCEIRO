@@ -1,7 +1,9 @@
-from utils.arquivos import db_cat_rev,db_cat_exp, new_db
+from utils.arquivos import db_cat_rev,db_cat_exp, new_db, db_confirm
+from utils.verifiers import quit
 import re
 EXP_PATH = "/Users/matheusgomes/Documents/CONTROLE_FINANCEIRO/cat_exp.json"
 REV_PATH = "/Users/matheusgomes/Documents/CONTROLE_FINANCEIRO/cat_rev.json"
+DB_PATH = "/Users/matheusgomes/Documents/CONTROLE_FINANCEIRO/financeiro.json"
 
 def categorize_rev():
     #LISTA DE CATEGORIAS
@@ -14,6 +16,8 @@ def categorize_rev():
 
     #ESCOLHA DE CATEGORIAS  
     choice = str(input("Digite: ")).strip()
+    if choice == "-1":
+        return choice
     for i, category in enumerate(categories):
         if choice == str(i+1):
             return(category)
@@ -29,21 +33,40 @@ def categorize_exp():
 
     #ESCOLHA DE CATEGORIAS  
     choice = str(input("Digite: ")).strip()
+    if choice == "-1":
+            return choice
     for i, category in enumerate(categories):
         if choice == str(i+1):
             return(category)
 
 def edit_cat():
-    categories_rev = db_cat_rev()
-    if categories_rev is None:
+    categories_rev_Wother = db_cat_rev()
+    if categories_rev_Wother is None:
         return
-    categories_exp = db_cat_exp()
-    if categories_exp is None:
+    categories_rev = []
+    for category in categories_rev_Wother:
+        if category != "Outros":
+            categories_rev.append(category)
+
+    
+    categories_exp_Wother = db_cat_exp()
+    if categories_exp_Wother is None:
+        return
+    categories_exp = []
+    for category in categories_exp_Wother:
+        if category != "Outros":
+            categories_exp.append(category)
+        
+
+    transactions = db_confirm()
+    if transactions is None:
         return
 
     edited_cat = []
     while True:
         choice = input("Você deseja DELETAR(1) ou CRIAR(2) uma categoria: ").strip()
+        if quit(choice):
+            return
         if not choice:
             print("O campo não pode ficar vazio!")
         elif not re.fullmatch(r"[1-9]+", choice):
@@ -55,11 +78,13 @@ def edit_cat():
     if choice == "1":
         while True:
             trans_type = input("Você quer deletar uma categoria de RECEITA(1) ou DESPESA(2): ").strip()
-            if not choice:
+            if quit(trans_type):
+                return
+            if not trans_type:
                 print("O campo não pode ficar vazio!")
-            elif not re.fullmatch(r"[1-9]+", choice):
+            elif not re.fullmatch(r"[1-9]+", trans_type):
                 print("Digite somente números!")
-            elif choice != "1" and choice != "2":
+            elif trans_type != "1" and trans_type != "2":
                 print("Escolha entre o número 1 e 2!")
             else:
                 break
@@ -70,6 +95,8 @@ def edit_cat():
                 print(f"[{i}] {category}")
 
             del_cat = input("Digite a categoria que quer deletar: ")
+            if quit(del_cat):
+                return
             for i, category in enumerate(categories_rev):
                 if del_cat != str(i+1):
                     edited_cat.append(category)
@@ -78,15 +105,59 @@ def edit_cat():
             return
         
         elif trans_type == "2":
-            for i, category in enumerate(categories_exp, 1):
-                print(f"[{i}] {category}")
-
-            del_cat = input("Digite a categoria que quer deletar: ")
-            for i, category in enumerate(categories_exp):
-                if del_cat != str(i+1):
-                    edited_cat.append(category)
-            new_db(EXP_PATH, edited_cat)
-            return
+            while True:
+                replay = False
+                new_trans = []
+                for i, category in enumerate(categories_exp, 1):
+                    print(f"[{i}] {category}")
+                while True:
+                    del_cat = input("Digite o número da categoria que quer deletar: ")
+                    if quit(del_cat):
+                        return
+                    if not choice:
+                        print("O campo não pode ficar vazio!")
+                    elif not re.fullmatch(r"[0-9]+", choice):
+                        print("Digite somente números naturais!")
+                    elif int(choice) > len(categories_exp) or int(choice) < 1:
+                        print("Digite um dos números mostrados!")
+                    else:
+                        break
+                for i, category in enumerate(categories_exp):
+                    if del_cat == str(i+1):
+                        print("1 passo")
+                        for trans in transactions:
+                            if replay:
+                                continue
+                            print("2 passo")
+                            if trans["category"] == category:
+                                print("3 passo")
+                                while True:
+                                    choice = input("Existem transações com essa categoria, deseja apagar mesmo assim[S/N]? ").strip().upper()
+                                    if quit(choice):
+                                        return
+                                    if not choice:
+                                        print("O campo não pode ficar vazio!")
+                                    elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", choice):
+                                        print("Digite somente letras!")
+                                    elif not (choice == "S" or choice == "N"):
+                                        print("Digite uma das opções dadas(S/N)")
+                                    else:
+                                        break
+                                if choice == "N":
+                                    replay = True
+                                    continue
+                                if choice == "S":
+                                    for trans in transactions:
+                                        if trans["category"] == category:  
+                                            trans["category"] = "Outros" 
+                                            new_trans.append(trans)
+                                        else:
+                                            new_trans.append(trans)
+                                                                    
+                    else:
+                        edited_cat.append(category)
+                new_db(EXP_PATH, edited_cat)
+                new_db(DB_PATH, new_trans)
 
         else:
             print("Digite uma das opções(1 ou 2)!")
@@ -94,11 +165,13 @@ def edit_cat():
     elif choice == "2":
         while True:
             trans_type = input("Você quer adicionar uma categoria de RECEITA(1) ou DESPESA(2): ").strip()
-            if not choice:
+            if quit(trans_type):
+                return
+            if not trans_type:
                 print("O campo não pode ficar vazio!")
-            elif not re.fullmatch(r"[1-9]+", choice):
+            elif not re.fullmatch(r"[1-9]+", trans_type):
                 print("Digite somente números!")
-            elif choice != "1" and choice != "2":
+            elif trans_type != "1" and trans_type != "2":
                 print("Escolha entre o número 1 e 2!")
             else:
                 break
@@ -107,6 +180,8 @@ def edit_cat():
                 edited_cat.append(category)
             while True:
                 new_cat = input("Digite o nome da nova categoria que você deseja: ").strip()
+                if quit(new_cat):
+                    return
                 if not new_cat:
                     print("O campo não pode ficar vazio!")
                 elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", new_cat):
@@ -121,6 +196,8 @@ def edit_cat():
                 edited_cat.append(category)
             while True:
                 new_cat = input("Digite o nome da nova categoria que você deseja: ").strip()
+                if quit(new_cat):
+                    return
                 if not new_cat:
                     print("O campo não pode ficar vazio!")
                 elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", new_cat):

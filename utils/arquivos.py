@@ -27,7 +27,7 @@ def db_confirm():
     
     return transacions
 
-def db_add(type,value,category,discription,date):
+def db_add(type,value,category,description,date):
     #verifica se o aquivo existe, se nao cria uma lista vazia
     if os.path.exists(DB_PATH):
         with open(DB_PATH, "r") as file:
@@ -39,7 +39,7 @@ def db_add(type,value,category,discription,date):
         transacions = []
 
 #adicionar o novo cliente
-    new_trans = Transaction(type,value,category,discription,date)
+    new_trans = Transaction(type,value,category,description,date)
     transacions.append(new_trans.to_dict())
     print(f"\n{new_trans}")
 #salva de volta no arquivo
