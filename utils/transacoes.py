@@ -67,61 +67,67 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
         else:
             break
     if choice == "1":
-        while True:
-            option = input("Pesquisar por: [1]Valor [2]Intervalo\nDigite: ")
-            if not choice:
-                print("O campo não pode ficar vazio")
-            elif not re.fullmatch(r"[0-9]+", choice):
-                print("Digite somente números naturais!")
-            elif (choice != "1") and (choice != "2"):
-                print("Digite uma das opções dadas(1/2)!")
-            else:
-                break
-        if option == "1":
-            value = value_verf(input("Digite o valor que queira procurar: "))
-            if quit(value):
-                return
-            print("-" * 30)
-            print("")
-            for trans in transactions:
-                if trans["value"] == value:
-                    trans_exist = True
-                    print(Transaction(
-                            trans["type"],
-                            trans["value"],
-                            trans["category"],
-                            trans["description"],
-                            trans["date"]
-                                            )) 
+            while True:
+                option = input("Pesquisar por: [1]Valor [2]Intervalo\nDigite: ")
+                if not choice:
+                    print("O campo não pode ficar vazio")
+                elif not re.fullmatch(r"[0-9]+", choice):
+                    print("Digite somente números naturais!")
+                elif (choice != "1") and (choice != "2"):
+                    print("Digite uma das opções dadas(1/2)!")
+                else:
+                    break
+            if option == "1":
+                while True:
+                    trans_exist = False
+                    value = value_verf(input("Digite o valor que queira procurar: "))
+                    if quit(value):
+                        return
+                    print("-" * 30)
                     print("")
-            if not trans_exist:
-                print("Nenhuma transação encontrada!\n")
-            print("-" * 30)  
+                    for trans in transactions:
+                        if trans["value"] == value:
+                            trans_exist = True
+                            print(Transaction(
+                                    trans["type"],
+                                    trans["value"],
+                                    trans["category"],
+                                    trans["description"],
+                                    trans["date"]
+                                                    )) 
+                            print("")
+                    if not trans_exist:
+                        print("Nenhuma transação encontrada!\n")
+                        
+                    print("-" * 30)  
 
-        elif option == "2":  
-            higher = value_verf_float(input("O valor é maior que: "))
-            if quit(higher):
-                return
-            lower = value_verf_float(input("O valor é menor que: "))
-            if quit(lower):
-                return
-            print("-" * 30)  
-            print("")
-            for trans in transactions:
-                trans["value"] = float(str(trans["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip())
-                if (trans["value"] > higher) and (trans["value"] < lower):
-                    trans_exist = True
-                    print(Transaction(
-                            trans["type"],
-                            trans["value"],
-                            trans["category"],
-                            trans["description"],
-                            trans["date"]
-                                            )) 
-                    print("")
-            if not trans_exist:
-                print("Nenhuma transação encontrada!\n")
-            print("-" * 30)  
+                    if trans_exist:
+                        return
+
+            elif option == "2":  
+                higher = value_verf_float(input("O valor é maior que: "))
+                if quit(higher):
+                    return
+                lower = value_verf_float(input("O valor é menor que: "))
+                if quit(lower):
+                    return
+                print("-" * 30)  
+                print("")
+                for trans in transactions:
+                    trans["value"] = float(str(trans["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip())
+                    if (trans["value"] > higher) and (trans["value"] < lower):
+                        trans_exist = True
+                        print(Transaction(
+                                trans["type"],
+                                trans["value"],
+                                trans["category"],
+                                trans["description"],
+                                trans["date"]
+                                                )) 
+                        print("")
+                if not trans_exist:
+                    print("Nenhuma transação encontrada!\n")
+                print("-" * 30)  
 
     elif choice == "2": #tem forma melhor de organizar/separar despesa e receita? aperfeicoar organizacao (cronologicamente)
         while True:
@@ -143,7 +149,7 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                         print(f"[{len(cat_list)}] ", end="")
                         print(trans["category"])
             while True:
-                choice = input("De qual categoria você quer ver as transações: ").strip()
+                choice = input("De qual categoria você quer editar as transações: ").strip()
                 if quit(choice):
                     return
                 if not choice:
@@ -198,6 +204,9 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                             trans["date"]
                                         ))
                             print("-" * 30)
+
+                        else:
+                            new_trans.append(trans)
                     
                     while True:
                         confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
@@ -217,33 +226,30 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                         continue
 
 
-            new_type = type_verf()
-            if quit(new_type):
+        new_type = type_verf()
+        if quit(new_type):
+            return
+        new_value = value_verf(input("Digite o novo valor: "))
+        if quit(new_value):
+            return
+        if new_type == "Receita":
+            new_category = categorize_rev()
+            if quit(new_category):
                 return
-            new_value = value_verf(input("Digite o novo valor: "))
-            if quit(new_value):
+        elif new_type == "Despesa":
+            new_category = categorize_exp()
+            if quit(new_category):
                 return
-            if new_type == "Receita":
-                new_category = categorize_rev()
-                if quit(new_category):
-                    return
-            elif new_type == "Despesa":
-                new_category = categorize_exp()
-                if quit(new_category):
-                    return
-                new_description = input("Digite a nova descrição: ")
-                if quit(new_description):
-                    return
-                new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-                if quit(new_date):
-                    return
-                trans = Transaction(new_type,new_value,new_category,new_description,new_date)
-                new_trans.append(trans.to_dict())
-                
-            else:
-                new_trans.append(trans)  
-            
-            new_db(DB_PATH, new_trans)
+        new_description = input("Digite a nova descrição: ")
+        if quit(new_description):
+            return
+        new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
+        if quit(new_date):
+            return
+        trans = Transaction(new_type,new_value,new_category,new_description,new_date)
+        new_trans.append(trans.to_dict())  
+        
+        new_db(DB_PATH, new_trans)
                  
     elif choice == "3":
         while True:

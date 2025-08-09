@@ -91,24 +91,12 @@ def edit_cat():
     
 
         if trans_type == "1":
-            for i, category in enumerate(categories_rev, 1):
-                print(f"[{i}] {category}")
-
-            del_cat = input("Digite a categoria que quer deletar: ")
-            if quit(del_cat):
-                return
-            for i, category in enumerate(categories_rev):
-                if del_cat != str(i+1):
-                    edited_cat.append(category)
-                    print(edited_cat)
-            new_db(REV_PATH, edited_cat)
-            return
-        
-        elif trans_type == "2":
             while True:
                 replay = False
+                confirm = False
+                edited_cat = []
                 new_trans = []
-                for i, category in enumerate(categories_exp, 1):
+                for i, category in enumerate(categories_rev, 1):
                     print(f"[{i}] {category}")
                 while True:
                     del_cat = input("Digite o número da categoria que quer deletar: ")
@@ -116,21 +104,22 @@ def edit_cat():
                         return
                     if not choice:
                         print("O campo não pode ficar vazio!")
-                    elif not re.fullmatch(r"[0-9]+", choice):
+                    elif not re.fullmatch(r"[0-9]+", del_cat):
                         print("Digite somente números naturais!")
-                    elif int(choice) > len(categories_exp) or int(choice) < 1:
+                    elif int(del_cat) > len(categories_rev) or int(del_cat) < 1:
                         print("Digite um dos números mostrados!")
                     else:
                         break
-                for i, category in enumerate(categories_exp):
+                for i, category in enumerate(categories_rev):
+                    if replay:
+                        continue
+
                     if del_cat == str(i+1):
-                        print("1 passo")
                         for trans in transactions:
                             if replay:
                                 continue
-                            print("2 passo")
                             if trans["category"] == category:
-                                print("3 passo")
+                                final_cat = category
                                 while True:
                                     choice = input("Existem transações com essa categoria, deseja apagar mesmo assim[S/N]? ").strip().upper()
                                     if quit(choice):
@@ -147,6 +136,7 @@ def edit_cat():
                                     replay = True
                                     continue
                                 if choice == "S":
+                                    confirm = True
                                     for trans in transactions:
                                         if trans["category"] == category:  
                                             trans["category"] = "Outros" 
@@ -156,9 +146,75 @@ def edit_cat():
                                                                     
                     else:
                         edited_cat.append(category)
-                new_db(EXP_PATH, edited_cat)
-                new_db(DB_PATH, new_trans)
+                if confirm:
+                    print(f"A categoria \"{final_cat}\" foi deletada!(Foi substituida por \"Outros\" nas transações que usavam-a)")
+                    edited_cat.append("Outros")
+                    new_db(REV_PATH, edited_cat)
+                    new_db(DB_PATH, new_trans)
+                    return
+        
+        elif trans_type == "2":
+            while True:
+                replay = False
+                confirm = False
+                edited_cat = []
+                new_trans = []
+                for i, category in enumerate(categories_exp, 1):
+                    print(f"[{i}] {category}")
+                while True:
+                    del_cat = input("Digite o número da categoria que quer deletar: ")
+                    if quit(del_cat):
+                        return
+                    if not choice:
+                        print("O campo não pode ficar vazio!")
+                    elif not re.fullmatch(r"[0-9]+", del_cat):
+                        print("Digite somente números naturais!")
+                    elif int(del_cat) > len(categories_exp) or int(del_cat) < 1:
+                        print("Digite um dos números mostrados!")
+                    else:
+                        break
+                for i, category in enumerate(categories_exp):
+                    if replay:
+                        continue
 
+                    if del_cat == str(i+1):
+                        for trans in transactions:
+                            if replay:
+                                continue
+                            if trans["category"] == category:
+                                final_cat = category
+                                while True:
+                                    choice = input("Existem transações com essa categoria, deseja apagar mesmo assim[S/N]? ").strip().upper()
+                                    if quit(choice):
+                                        return
+                                    if not choice:
+                                        print("O campo não pode ficar vazio!")
+                                    elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", choice):
+                                        print("Digite somente letras!")
+                                    elif not (choice == "S" or choice == "N"):
+                                        print("Digite uma das opções dadas(S/N)")
+                                    else:
+                                        break
+                                if choice == "N":
+                                    replay = True
+                                    continue
+                                if choice == "S":
+                                    confirm = True
+                                    for trans in transactions:
+                                        if trans["category"] == category:  
+                                            trans["category"] = "Outros" 
+                                            new_trans.append(trans)
+                                        else:
+                                            new_trans.append(trans)
+                                                                    
+                    else:
+                        edited_cat.append(category)
+                if confirm:
+                    print(f"A categoria \"{final_cat}\" foi deletada!(Foi substituida por \"Outros\" nas transações que usavam-a)")
+                    edited_cat.append("Outros")
+                    new_db(EXP_PATH, edited_cat)
+                    new_db(DB_PATH, new_trans)
+                    return
         else:
             print("Digite uma das opções(1 ou 2)!")
 

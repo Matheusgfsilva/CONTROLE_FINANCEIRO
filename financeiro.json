@@ -1,1 +1,37 @@
-[]
+[
+     {
+          "type": "Receita",
+          "value": "R$1.200,00",
+          "category": "Dividendos",
+          "description": "mesada",
+          "date": "2025-08-09"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$150,00",
+          "category": "Lazer",
+          "description": "Cinema com duda",
+          "date": "2025-08-09"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$80,00",
+          "category": "Sa\u00fade",
+          "description": "Remedio",
+          "date": "2025-08-09"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$15,00",
+          "category": "Transporte",
+          "description": "Uber",
+          "date": "2025-08-09"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$15,00",
+          "category": "C\u00c9lula",
+          "description": "Lanche",
+          "date": "2025-08-09"
+     }
+]
