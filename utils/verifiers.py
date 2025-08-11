@@ -54,7 +54,7 @@ def month_verf(mon):
             print("O campo não pode ficar vazio!")
         elif not re.fullmatch(r"[0-9]+", mon):
             print("Digite somente números naturais!")
-        elif not (int(mon) >= 1 and int(mon) <= 12 and int(mon) > 0):
+        elif not (int(mon) >= 1 and int(mon) <= 12):
             print("Digite um número que corresponda á um mês!")
         else:
             return mon
