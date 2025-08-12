@@ -1,30 +1,142 @@
 [
      {
           "type": "Receita",
-          "value": "R$1.234,00",
+          "value": "R$1.400,00",
           "category": "Sal\u00e1rio",
-          "discription": "PRIMO RICO",
-          "date": "2025-07-31"
+          "description": "Mesada",
+          "date": "2025-08-11"
+     },
+     {
+          "type": "Receita",
+          "value": "R$50,00",
+          "category": "Dividendos",
+          "description": "investimentos",
+          "date": "2025-08-10"
+     },
+     {
+          "type": "Receita",
+          "value": "R$20,00",
+          "category": "Empr\u00e9stimo",
+          "description": "peguei emprestado com ferreira",
+          "date": "2024-12-15"
      },
      {
           "type": "Receita",
           "value": "R$90,00",
-          "category": "Empr\u00e9stimo",
-          "discription": "pao",
-          "date": "2025-07-31"
+          "category": "Outros",
+          "description": "tigrinho",
+          "date": "2023-07-01"
      },
      {
           "type": "Receita",
-          "value": "R$1.000,00",
+          "value": "R$700,00",
           "category": "Sal\u00e1rio",
-          "discription": "mesada",
-          "date": "2025-07-31"
+          "description": "parte do sal\u00e1rio",
+          "date": "2024-02-28"
+     },
+     {
+          "type": "Receita",
+          "value": "R$40,00",
+          "category": "Dividendos",
+          "description": "renda passiva",
+          "date": "2023-11-05"
+     },
+     {
+          "type": "Receita",
+          "value": "R$120,00",
+          "category": "Outros",
+          "description": "venda usada",
+          "date": "2025-01-20"
+     },
+     {
+          "type": "Receita",
+          "value": "R$80,00",
+          "category": "Dividendos",
+          "description": "rendimentos",
+          "date": "2024-08-11"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$120,00",
+          "category": "Lazer",
+          "description": "Cinema",
+          "date": "2025-08-11"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$200,00",
+          "category": "Alimenta\u00e7\u00e3o",
+          "description": "Mercado do m\u00eas",
+          "date": "2025-08-10"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$45,00",
+          "category": "Transporte",
+          "description": "\u00d4nibus/cart\u00e3o",
+          "date": "2024-12-16"
      },
      {
           "type": "Despesa",
           "value": "R$250,00",
-          "category": "Empr\u00e9stimo",
-          "discription": "Emprestei pra ferreira",
-          "date": "2025-07-31"
+          "category": "Sa\u00fade",
+          "description": "Consulta",
+          "date": "2023-07-02"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$40,00",
+          "category": "C\u00e9lula",
+          "description": "Lanche do grupo",
+          "date": "2024-03-01"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$220,00",
+          "category": "Alimenta\u00e7\u00e3o",
+          "description": "Restaurante",
+          "date": "2024-02-28"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$90,00",
+          "category": "Transporte",
+          "description": "Combust\u00edvel",
+          "date": "2023-11-06"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$150,00",
+          "category": "Lazer",
+          "description": "Passeio",
+          "date": "2025-01-21"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$37,00",
+          "category": "Alimenta\u00e7\u00e3o",
+          "description": "Hamburguer",
+          "date": "2025-08-09"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$13,75",
+          "category": "Transporte",
+          "description": "Uber",
+          "date": "2025-08-08"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$70,00",
+          "category": "Sa\u00fade",
+          "description": "Rem\u00e9dios",
+          "date": "2024-12-20"
+     },
+     {
+          "type": "Despesa",
+          "value": "R$584,25",
+          "category": "Outros",
+          "description": "Ajuste de despesas",
+          "date": "2023-10-10"
      }
 ]
