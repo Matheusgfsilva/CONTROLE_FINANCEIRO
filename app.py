@@ -1,23 +1,26 @@
 from utils.transacoes import revenue, expense, edit_trans, deleteone, deleteall, find_trans, random
-from utils.relatorios import balance
+from utils.relatorios import balance, relatory
 from utils.classificacao import edit_cat
-
+from utils.ui import HEADER, RULE, ASK, OK, ERROR, WARN, INFO
 
 while True:
-    print("\n========= CONTROLE FINANCEIRO =========")
-    print("Saldo: ", end=""), balance()
-    print("[0] GERAR TRANSAÇÕES ALEATÓRIAS")
-    print("\n[1] RECEITA")
-    print("[2] DESPESA") 
-    print("[3] RELATÓRIO")
-    print("[4] EDITAR TRANSAÇÃO")
-    print("[5] LISTAR TRANSAÇÃO")
-    print("[6] DELETAR UMA TRANSAÇÃO")
-    print("[7] DELETAR TODAS TRANSAÇÕES")
-    print("[8] EDITAR CATEGORIAS")
-    print("[9] SAIR")
-    print("(sempre digite \"-1\" para interromper um processo)\n")
-    choice = input("Digite: ").strip()
+    HEADER("CONTROLE FINANCEIRO")
+    balance()
+    RULE()
+    INFO("[0] GERAR TRANSAÇÕES ALEATÓRIAS")
+    INFO("[1] RECEITA")
+    INFO("[2] DESPESA")
+    INFO("[3] RELATÓRIO")
+    INFO("[4] EDITAR TRANSAÇÃO")
+    INFO("[5] LISTAR TRANSAÇÃO")
+    INFO("[6] DELETAR UMA TRANSAÇÃO")
+    INFO("[7] DELETAR TODAS TRANSAÇÕES")
+    INFO("[8] EDITAR CATEGORIAS")
+    INFO("[9] SAIR")
+    INFO("(SEMPRE DIGITE \"-1\" PARA INTERROMPER UM PROCESSO)")
+    RULE()
+
+    choice = ASK("DIGITE A OPÇÃO:")
 
     if choice == "0":
         random()
@@ -26,7 +29,7 @@ while True:
     elif choice == "2":
         expense()
     elif choice == "3":
-        print("3")
+        relatory()
     elif choice == "4":
         edit_trans()
     elif choice == "5":
@@ -38,9 +41,9 @@ while True:
     elif choice == "8":
         edit_cat()
     elif choice == "9":
-        print("OBRIGADO PELA PREFERÊNCIA!")
+        OK("OBRIGADO PELA PREFERÊNCIA!")
         break
     elif not choice:
-        print("O campo não pode ficar vazio")
+        ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
     else:
-        print("Digite um carctere válido!")
+        ERROR("DIGITE UM CARACTERE VÁLIDO!")
