@@ -1,77 +1,102 @@
 from utils.classificacao import categorize_rev, categorize_exp
 from utils.arquivos import db_add, db_confirm, new_db
-from utils.verifiers import value_verf, month_verf, type_verf, date_verf, value_verf_float, year_verf, quit
+from utils.verifiers import quit, _cancelled, value_verf, month_verf, type_verf, date_verf, value_verf_float, year_verf
 from utils.trans_class import Transaction
 import datetime
 import re
 import json
+from utils.ui import HEADER, RULE, ASK, OK, ERROR, WARN, INFO, trans_table
+
+def _list_with_table(trans_list):
+    if trans_list:
+        trans_table(trans_list)
+    else:
+        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+
+
+# Helper para escolher categoria sem duplicar aviso de cancelamento
+# Retorna None se o usuário cancelar (-1)
+def pick_category(kind: str):
+    cat = categorize_rev() if kind == "Receita" else categorize_exp()
+    if cat == "-1":
+        WARN("OPERAÇÃO CANCELADA!")
+        return None
+    return cat
+
 DB_PATH = "/Users/matheusgomes/Documents/CONTROLE_FINANCEIRO/financeiro.json"
 
 def revenue():
     type = "Receita"
-
-    value = value_verf(str(input("Valor: ").strip()))
-    if quit(value):
+    raw = ASK("VALOR:")
+    if _cancelled(raw):
+        return
+    value = value_verf(raw)
+    if value == "-1":
+        WARN("OPERAÇÃO CANCELADA!")
         return
 
-    category = categorize_rev()
-    if quit(category):
+    category = pick_category("Receita")
+    if category is None:
         return
 
-    description = input("Descrição: ")
-    if quit(description):
+    description = ASK("DESCRIÇÃO:")
+    if _cancelled(description):
         return
 
     date = datetime.date.today().isoformat()
-
     db_add(type, value, category, description, date)
-
+    
 def expense():
     type = "Despesa"
-
-    value = value_verf(input("Valor: ").strip())
-    if quit(value):
+    raw = ASK("VALOR:")
+    if _cancelled(raw):
+        return
+    value = value_verf(raw)
+    if value == "-1":
+        WARN("OPERAÇÃO CANCELADA!")
         return
 
-    category = categorize_exp()
-    if quit(category):
+    category = pick_category("Despesa")
+    if category is None:
         return
 
-    description = input("Descrição: ").strip().capitalize()
-    if quit(description):
+    description = ASK("DESCRIÇÃO:").capitalize()
+    if _cancelled(description):
         return
     
     date = datetime.date.today().isoformat()
 
     db_add(type, value, category, description, date)
 
-def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar melhor por mesv
+def edit_trans():  # aprofundar depois quando tiver beckup de cada dia, e separar melhor por mesv
     transactions = db_confirm()
     if transactions is None:
         return
+    HEADER("EDITAR TRANSAÇÃO")
     
-
     while True:
-        choice = input("Como você deseja procurar sua transação? [1]Valor [2]Categoria [3]Data\nDigite: ")
-        if quit(choice):
+        choice = ASK("COMO VOCÊ DESEJA PROCURAR SUA TRANSAÇÃO? [1]VALOR [2]CATEGORIA [3]DATA")
+        if _cancelled(choice):
             return
         if not choice:
-            print("O campo não pode ficar vazio")
+            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
         elif not re.fullmatch(r"[0-9]+", choice):
-            print("Digite somente números naturais!")
+            ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
         elif (choice != "1") and (choice != "2") and (choice != "3"):
-            print("Digite uma das opções dadas(1/2/3)!")
+            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
         else:
             break
     if choice == "1":
             while True:
-                option = input("Pesquisar por: [1]Valor [2]Intervalo\nDigite: ")
+                option = ASK("PESQUISAR POR: [1]VALOR [2]INTERVALO")
+                if _cancelled(option):
+                    return
                 if not option:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", option):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (option != "1") and (option != "2"):
-                    print("Digite uma das opções dadas(1/2)!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break
             if option == "1":
@@ -79,51 +104,43 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                     trans_list = []
                     trans_exist = False
                     new_trans = []
-                    value = value_verf(input("Digite o valor que queira procurar: "))
-                    if quit(value):
+                    raw = ASK("DIGITE O VALOR QUE QUEIRA PROCURAR:")
+                    if _cancelled(raw):
                         return
-                    print("-" * 30)
+                    value = value_verf(raw)
+                    if value == "-1":
+                        WARN("OPERAÇÃO CANCELADA!")
+                        return
+                    RULE()
                     print("")
                     for trans in transactions:
                         if trans["value"] == value:
                             trans_exist = True
                             trans_list.append(trans)
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                    )) 
-                            print("")
                         else:
                             new_trans.append(trans)
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                        
-                    print("-" * 30)  
 
+                    _list_with_table(trans_list)
                     if not trans_exist:
                         continue
-                
+
                     if trans_exist == True:
                         while True:  
-                            choice = input("Qual o número da transação que deseja editar: ").strip()
-                            if quit(choice):
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                            if _cancelled(choice):
                                 return
                             if not choice:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                             elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                             else:
                                 break
                         
                         for i, trans in enumerate(trans_list):
                             if i == (int(choice)-1):
-                                print("-" * 30)
+                                RULE()
                                 print(Transaction(
                                 trans["type"],
                                 trans["value"],
@@ -131,21 +148,21 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                                 trans["description"],
                                 trans["date"]
                                             ))
-                                print("-" * 30)
+                                RULE()
                         
                             else:
                                 new_trans.append(trans)
 
                         while True:
-                            confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                            if quit(confimation):
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
                             if not confimation:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
+                                ERROR("DIGITE SOMENTE LETRAS!")
                             elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                             else:
                                 break
                         if confimation == "S":
@@ -155,26 +172,31 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
 
 
                 new_type = type_verf()
-                if quit(new_type):
+                if new_type in ("-1", None, ""):
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_value = value_verf(input("Digite o novo valor: "))
-                if quit(new_value):
+
+                raw_nv = ASK("DIGITE O NOVO VALOR:")
+                if _cancelled(raw_nv):
                     return
-                if new_type == "Receita":
-                    new_category = categorize_rev()
-                    if quit(new_category):
-                        return
-                elif new_type == "Despesa":
-                    new_category = categorize_exp()
-                    if quit(new_category):
-                        return
-                new_description = input("Digite a nova descrição: ")
-                if quit(new_description):
+                new_value = value_verf(raw_nv)
+                if new_value == "-1":
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-                if quit(new_date):
+
+                new_category = pick_category(new_type)
+                if new_category is None:
                     return
-                trans = Transaction(new_type,new_value,new_category,new_description,new_date)
+
+                new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+                if _cancelled(new_description):
+                    return
+
+                raw_nd = ASK("DIGITE A NOVA DATA:")
+                if _cancelled(raw_nd):
+                    return
+                new_date = date_verf(raw_nd)
+                trans = Transaction(new_type, new_value, new_category, new_description, new_date)
                 new_trans.append(trans.to_dict())
                 
                 new_db(DB_PATH, new_trans)
@@ -184,62 +206,58 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                     trans_list = []
                     trans_exist = False
                     new_trans = []
-                    higher = value_verf_float(input("O valor é maior que: "))
-                    if quit(higher):
+                    raw_h = ASK("O VALOR É MAIOR QUE:")
+                    if _cancelled(raw_h):
                         return
-                    lower = value_verf_float(input("O valor é menor que: "))
-                    if quit(lower):
+                    higher = value_verf_float(raw_h)
+                    if higher == "-1":
+                        WARN("OPERAÇÃO CANCELADA!")
+                        return
+                    raw_l = ASK("O VALOR É MENOR QUE:")
+                    if _cancelled(raw_l):
+                        return
+                    lower = value_verf_float(raw_l)
+                    if lower == "-1":
+                        WARN("OPERAÇÃO CANCELADA!")
                         return
                     
                     if lower < higher:
                         lower, higher = higher, lower
 
                     if higher == lower:
-                        print("Digite valores diferentes!")
+                        ERROR("DIGITE VALORES DIFERENTES!")
                         continue
-                    print("-" * 30)  
+                    RULE()  
                     print("")
                     for trans in transactions:
-                        val = trans["value"]
                         val = float(str(trans["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip())
                         if (val > higher) and (val < lower):
                             trans_exist = True
                             trans_list.append(trans)
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                    )) 
-                            print("")
                         else:
                             new_trans.append(trans)
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)  
 
+                    _list_with_table(trans_list)
                     if not trans_exist:
                         continue
                 
                     if trans_exist == True:
                         while True:  
-                            choice = input("Qual o número da transação que deseja editar: ").strip()
-                            if quit(choice):
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                            if _cancelled(choice):
                                 return
                             if not choice:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                             elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                             else:
                                 break
                         
                         for i, trans in enumerate(trans_list):
                             if i == (int(choice)-1):
-                                print("-" * 30)
+                                RULE()
                                 print(Transaction(
                                 trans["type"],
                                 trans["value"],
@@ -247,21 +265,21 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                                 trans["description"],
                                 trans["date"]
                                             ))
-                                print("-" * 30)
+                                RULE()
                         
                             else:
                                 new_trans.append(trans)
 
                         while True:
-                            confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                            if quit(confimation):
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
                             if not confimation:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
+                                ERROR("DIGITE SOMENTE LETRAS!")
                             elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                             else:
                                 break
                         if confimation == "S":
@@ -271,43 +289,48 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
 
 
                 new_type = type_verf()
-                if quit(new_type):
+                if new_type in ("-1", None, ""):
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_value = value_verf(input("Digite o novo valor: "))
-                if quit(new_value):
+
+                raw_nv = ASK("DIGITE O NOVO VALOR:")
+                if _cancelled(raw_nv):
                     return
-                if new_type == "Receita":
-                    new_category = categorize_rev()
-                    if quit(new_category):
-                        return
-                elif new_type == "Despesa":
-                    new_category = categorize_exp()
-                    if quit(new_category):
-                        return
-                new_description = input("Digite a nova descrição: ")
-                if quit(new_description):
+                new_value = value_verf(raw_nv)
+                if new_value == "-1":
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-                if quit(new_date):
+
+                new_category = pick_category(new_type)
+                if new_category is None:
                     return
+
+                new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+                if _cancelled(new_description):
+                    return
+
+                raw_nd = ASK("DIGITE A NOVA DATA:")
+                if _cancelled(raw_nd):
+                    return
+                new_date = date_verf(raw_nd)
                 trans = Transaction(new_type,new_value,new_category,new_description,new_date)
                 new_trans.append(trans.to_dict())
                 
                 new_db(DB_PATH, new_trans)
 
-    elif choice == "2": #tem forma melhor de organizar/separar despesa e receita? aperfeicoar organizacao (cronologicamente)
+    elif choice == "2":
         while True:
             cat_list = []
             trans_list = []
             new_trans = []
             trans_exist = False
+            # Listar categorias únicas de Receita e Despesa
             for trans in transactions:
                 if trans["type"] == "Receita":
                     if trans["category"] not in cat_list:
                         cat_list.append(trans["category"])
                         print(f"[{len(cat_list)}] ", end="")
                         print(trans["category"])
-
             for trans in transactions:
                 if trans["type"] == "Despesa":
                     if trans["category"] not in cat_list:
@@ -315,253 +338,239 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                         print(f"[{len(cat_list)}] ", end="")
                         print(trans["category"])
             while True:
-                choice = input("De qual categoria você quer editar as transações: ").strip()
-                if quit(choice):
+                choice_cat = ASK("DE QUAL CATEGORIA VOCÊ QUER EDITAR AS TRANSAÇÕES:")
+                if _cancelled(choice_cat):
                     return
-                if not choice:
-                    print("O campo não pode ficar vazio")
-                elif not re.fullmatch(r"[0-9]+", choice):
-                    print("Digite somente números naturais!")
-                elif (int(choice) > len(cat_list)) or (int(choice) <= 0):
-                    print("Digite uma das opções dadas!")
+                if not choice_cat:
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                elif not re.fullmatch(r"[0-9]+", choice_cat):
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
+                elif (int(choice_cat) > len(cat_list)) or (int(choice_cat) <= 0):
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
-                    break   
-            print("-" * 30)
+                    break
+            RULE()
             print("")
             for i, cat in enumerate(cat_list):
-                if i == (int(choice)-1):
+                if i == (int(choice_cat)-1):
                     for trans in transactions:
                         if trans["category"] == cat:
                             trans_list.append(trans)
                             trans_exist = True
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                            print("") 
                         else:
                             new_trans.append(trans)
-
-            print("-" * 30)
-            if trans_exist == True:
-                    while True:  
-                        choice = input("Qual o número da transação que deseja editar: ").strip()
-                        if quit(choice):
-                            return
-                        if not choice:
-                            print("O campo não pode ficar vazio!")
-                        elif not re.fullmatch(r"[0-9]+", choice):
-                            print("Digite somente números naturais!")
-                        elif int(choice) > len(trans_list) or int(choice) < 1:
-                            print("Digite um dos números mostrados!")
-                        else:
-                            break
-                    
-                    for i, trans in enumerate(trans_list):
-                        if i == (int(choice)-1):
-                            print("-" * 30)
-                            print(Transaction(
+            _list_with_table(trans_list)
+            RULE()
+            if not trans_exist:
+                continue
+            if trans_exist:
+                while True:
+                    idx_choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                    if _cancelled(idx_choice):
+                        return
+                    if not idx_choice:
+                        ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                    elif not re.fullmatch(r"[0-9]+", idx_choice):
+                        ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
+                    elif int(idx_choice) > len(trans_list) or int(idx_choice) < 1:
+                        ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
+                    else:
+                        break
+                for i, trans in enumerate(trans_list):
+                    if i == (int(idx_choice)-1):
+                        RULE()
+                        print(Transaction(
                             trans["type"],
                             trans["value"],
                             trans["category"],
                             trans["description"],
                             trans["date"]
-                                        ))
-                            print("-" * 30)
-
-                        else:
-                            new_trans.append(trans)
-                    
-                    while True:
-                        confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                        if quit(confimation):
-                            return
-                        if not confimation:
-                            print("O campo não pode ficar vazio!")
-                        elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                            print("Digite somente letras!")
-                        elif not (confimation == "S" or confimation == "N"):
-                            print("Digite uma das opções dadas(S/N)")
-                        else:
-                            break
-                    if confimation == "S":
+                        ))
+                        RULE()
+                    else:
+                        new_trans.append(trans)
+                while True:
+                    confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                    if _cancelled(confimation):
+                        return
+                    if not confimation:
+                        ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                    elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
+                        ERROR("DIGITE SOMENTE LETRAS!")
+                    elif not (confimation == "S" or confimation == "N"):
+                        ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
+                    else:
                         break
-                    elif confimation == "N":
-                        continue
-
-
+                if confimation == "S":
+                    break
+                elif confimation == "N":
+                    continue
         new_type = type_verf()
-        if quit(new_type):
+        if new_type in ("-1", None, ""):
+            WARN("OPERAÇÃO CANCELADA!")
             return
-        new_value = value_verf(input("Digite o novo valor: "))
-        if quit(new_value):
+
+        raw_nv = ASK("DIGITE O NOVO VALOR:")
+        if _cancelled(raw_nv):
             return
-        if new_type == "Receita":
-            new_category = categorize_rev()
-            if quit(new_category):
-                return
-        elif new_type == "Despesa":
-            new_category = categorize_exp()
-            if quit(new_category):
-                return
-        new_description = input("Digite a nova descrição: ")
-        if quit(new_description):
+        new_value = value_verf(raw_nv)
+        if new_value == "-1":
+            WARN("OPERAÇÃO CANCELADA!")
             return
-        new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-        if quit(new_date):
+
+        new_category = pick_category(new_type)
+        if new_category is None:
             return
-        trans = Transaction(new_type,new_value,new_category,new_description,new_date)
-        new_trans.append(trans.to_dict())  
-        
+
+        new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+        if _cancelled(new_description):
+            return
+
+        raw_nd = ASK("DIGITE A NOVA DATA:")
+        if _cancelled(raw_nd):
+            return
+        new_date = date_verf(raw_nd)
+        trans = Transaction(new_type, new_value, new_category, new_description, new_date)
+        new_trans.append(trans.to_dict())
         new_db(DB_PATH, new_trans)
                  
     elif choice == "3":
         while True:
-            option = input("Pesquisar por: [1]Dia/Mês/Ano [2]Periodo personalizado\nDigite: ").strip()
+            option = ASK("PESQUISAR POR: [1]DIA/MÊS/ANO [2]PERÍODO PERSONALIZADO")
+            if _cancelled(option):
+                return
             if not option:
-                print("O campo não pode ficar vazio")
+                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
             elif not re.fullmatch(r"[0-9]+", option):
-                print("Digite somente números naturais!")
+                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
             elif (option != "1") and (option != "2"):
-                print("Digite uma das opções dadas!")
+                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
             else:
                 break
         if option == "1":
             while True:
-                type = input("[1]Dia [2]Mês [3]Ano\nDigite: ").strip()
-                if quit(type):
+                type = ASK("[1]DIA [2]MÊS [3]ANO")
+                if _cancelled(type):
                     return
                 if not type:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", type):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (type != "1") and (type != "2") and (type != "3"):
-                    print("Digite uma das opções dadas!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break
             if type == "1":
+                go_edit = False
                 while True:
                     trans_exist = False
                     trans_list = []
                     new_trans = []
-                    day = date_verf(input("Digite o dia específico que quer procurar(YYYY-MM-DD): "))
-                    if quit(day):
+                    raw_day = ASK("DIGITE O DIA ESPECÍFICO QUE QUER PROCURAR (YYYY-MM-DD):")
+                    if _cancelled(raw_day):
                         return
-                    print("-" * 30)
+                    day = date_verf(raw_day)
+                    RULE()
                     print("")
                     for trans in transactions:
                         if trans["date"] == day:
                             trans_list.append(trans)
                             trans_exist = True
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
+                        else:
+                            new_trans.append(trans)
+                    _list_with_table(trans_list)
+                    RULE()
+                    if not trans_exist:
+                        continue
+                    if trans_exist:
+                        while True:
+                            idx_choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                            if _cancelled(idx_choice):
+                                return
+                            if not idx_choice:
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                            elif not re.fullmatch(r"[0-9]+", idx_choice):
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
+                            elif int(idx_choice) > len(trans_list) or int(idx_choice) < 1:
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
+                            else:
+                                break
+                        for i, trans in enumerate(trans_list):
+                            if i == (int(idx_choice)-1):
+                                RULE()
+                                print(Transaction(
                                     trans["type"],
                                     trans["value"],
                                     trans["category"],
                                     trans["description"],
                                     trans["date"]
-                                                ))  
-                            print("") 
-                        
-                        else:
-                            new_trans.append(trans)
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada\n")
-                    print("-" * 30)
-
-                    if not trans_exist:
-                        continue
-                    
-                    if trans_exist == True:
-                        while True:  
-                            choice = input("Qual o número da transação que deseja editar: ").strip()
-                            if quit(choice):
-                                return
-                            if not choice:
-                                print("O campo não pode ficar vazio!")
-                            elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
-                            elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
-                            else:
-                                break
-                        
-                        for i, trans in enumerate(trans_list):
-                            if i == (int(choice)-1):
-                                print("-" * 30)
-                                print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))
-                                print("-" * 30)
-                        
+                                ))
+                                RULE()
                             else:
                                 new_trans.append(trans)
-
                         while True:
-                            confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                            if quit(confimation):
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
                             if not confimation:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
+                                ERROR("DIGITE SOMENTE LETRAS!")
                             elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                             else:
                                 break
                         if confimation == "S":
+                            go_edit = True
                             break
                         elif confimation == "N":
                             continue
-
-
+                if not go_edit:
+                    return
                 new_type = type_verf()
-                if quit(new_type):
+                if new_type in ("-1", None, ""):
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_value = value_verf(input("Digite o novo valor: "))
-                if quit(new_value):
-                    return
-                if new_type == "Receita":
-                    new_category = categorize_rev()
-                    if quit(new_category):
-                        return
-                elif new_type == "Despesa":
-                    new_category = categorize_exp()
-                    if quit(new_category):
-                        return
-                new_description = input("Digite a nova descrição: ")
-                if quit(new_description):
-                    return
-                new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-                if quit(new_date):
-                    return
-                trans = Transaction(new_type,new_value,new_category,new_description,new_date)
-                new_trans.append(trans.to_dict())
-                
-                new_db(DB_PATH, new_trans)
 
+                raw_nv = ASK("DIGITE O NOVO VALOR:")
+                if _cancelled(raw_nv):
+                    return
+                new_value = value_verf(raw_nv)
+                if new_value == "-1":
+                    WARN("OPERAÇÃO CANCELADA!")
+                    return
+
+                new_category = pick_category(new_type)
+                if new_category is None:
+                    return
+
+                new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+                if _cancelled(new_description):
+                    return
+
+                raw_nd = ASK("DIGITE A NOVA DATA:")
+                if _cancelled(raw_nd):
+                    return
+                new_date = date_verf(raw_nd)
+                trans = Transaction(new_type, new_value, new_category, new_description, new_date)
+                new_trans.append(trans.to_dict())
+                new_db(DB_PATH, new_trans)
             elif type == "2":
+                go_edit = False
                 while True:
                     trans_exist = False
                     year_exist = False
                     new_trans = []
                     trans_list = []
-                    choice_year = year_verf(input("Digite o ano que você quer ver os meses: ").strip())
-                    if quit(choice_year):
+                    raw_y = ASK("DIGITE O ANO QUE VOCÊ QUER VER OS MESES:")
+                    if _cancelled(raw_y):
                         return
-                    choice_mon = (month_verf(input("Digite o mês que você quer ver: "))).lstrip("0")
-                    if quit(choice_mon):
+                    choice_year = year_verf(raw_y)
+                    raw_m = ASK("DIGITE O MÊS QUE VOCÊ QUER VER:")
+                    if _cancelled(raw_m):
                         return
-                    
-                    print("-" * 30)
+                    choice_mon = (month_verf(raw_m)).lstrip("0")
+                    RULE()
                     print("")
                     for trans in transactions:
                         year = datetime.datetime.fromisoformat(trans["date"]).year
@@ -571,210 +580,180 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                             if str(choice_mon) == str(month):
                                 trans_exist = True
                                 trans_list.append(trans)
-                                print(f"[{len(trans_list)}] ", end="")
+                            else:
+                                new_trans.append(trans)
+                        else:
+                            new_trans.append(trans)
+                    _list_with_table(trans_list)
+                    if not year_exist:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                    elif not trans_exist:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                    RULE()
+                    if not trans_exist or not year_exist:
+                        continue
+                    if trans_exist:
+                        while True:
+                            idx_choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                            if _cancelled(idx_choice):
+                                return
+                            if not idx_choice:
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                            elif not re.fullmatch(r"[0-9]+", idx_choice):
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
+                            elif int(idx_choice) > len(trans_list) or int(idx_choice) < 1:
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
+                            else:
+                                break
+                        for i, trans in enumerate(trans_list):
+                            if i == (int(idx_choice)-1):
+                                RULE()
                                 print(Transaction(
                                     trans["type"],
                                     trans["value"],
                                     trans["category"],
                                     trans["description"],
                                     trans["date"]
-                                                ))  
-                                print("") 
+                                ))
+                                RULE()
                             else:
                                 new_trans.append(trans)
-                        else:
-                            new_trans.append(trans)
-
-                    if not year_exist:
-                        print("Nenhuma transação encontrada!\n")
-
-                    else:
-                        if not trans_exist:
-                            print("Nenhuma transação encontrada!\n")
-
-                    print("-" * 30)
-                    if not trans_exist:
-                        continue
-
-                    if not year_exist:
-                        continue
-
-
-                    if trans_exist == True:
-                        while True:  
-                            choice = input("Qual o número da transação que deseja editar: ").strip()
-                            if quit(choice):
-                                return
-                            if not choice:
-                                print("O campo não pode ficar vazio!")
-                            elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
-                            elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
-                            else:
-                                break
-                        
-                        for i, trans in enumerate(trans_list):
-                            if i == (int(choice)-1):
-                                print("-" * 30)
-                                print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))
-                                print("-" * 30)
-
-                            else:
-                                new_trans.append(trans)
-
                         while True:
-                            confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                            if quit(confimation):
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
                             if not confimation:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
+                                ERROR("DIGITE SOMENTE LETRAS!")
                             elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                             else:
                                 break
                         if confimation == "S":
+                            go_edit = True
                             break
                         elif confimation == "N":
                             continue
-
-
+                if not go_edit:
+                    return
                 new_type = type_verf()
-                if quit(new_type):
+                if new_type in ("-1", None, ""):
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_value = value_verf(input("Digite o novo valor: "))
-                if quit(new_value):
-                    return
-                if new_type == "Receita":
-                    new_category = categorize_rev()
-                    if quit(new_category):
-                        return
-                elif new_type == "Despesa":
-                    new_category = categorize_exp()
-                    if quit(new_category):
-                        return
-                new_description = input("Digite a nova descrição: ")
-                if quit(new_description):
-                    return
-                new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-                if quit(new_date):
-                    return
-                trans = Transaction(new_type,new_value,new_category,new_description,new_date)
-                new_trans.append(trans.to_dict())
-                
-                
-                new_db(DB_PATH, new_trans)
 
+                raw_nv = ASK("DIGITE O NOVO VALOR:")
+                if _cancelled(raw_nv):
+                    return
+                new_value = value_verf(raw_nv)
+
+                new_category = pick_category(new_type)
+                if new_category is None:
+                    return
+
+                new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+                if _cancelled(new_description):
+                    return
+
+                raw_nd = ASK("DIGITE A NOVA DATA:")
+                if _cancelled(raw_nd):
+                    return
+                new_date = date_verf(raw_nd)
+                trans = Transaction(new_type, new_value, new_category, new_description, new_date)
+                new_trans.append(trans.to_dict())
+                new_db(DB_PATH, new_trans)
             elif type == "3":
+                go_edit = False
                 while True:
                     trans_exist = False
                     trans_list = []
                     new_trans = []
-                    choice_year = year_verf(input("Digite o ano que você quer ver as transações: ").strip())
-                    print("-" * 30)
+                    raw_y2 = ASK("DIGITE O ANO QUE VOCÊ QUER VER AS TRANSAÇÕES:")
+                    if _cancelled(raw_y2):
+                        return
+                    choice_year = year_verf(raw_y2)
+                    RULE()
                     print("")
                     for trans in transactions:
                         year = datetime.datetime.fromisoformat(trans["date"]).year
                         if str(choice_year) == str(year):
                             trans_list.append(trans)
                             trans_exist = True
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))  
-                            print("") 
-
                         else:
                             new_trans.append(trans)
-                    
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)
+                    _list_with_table(trans_list)
+                    RULE()
                     if not trans_exist:
                         continue
-
-
-                    if trans_exist == True:
-                            while True:  
-                                choice = input("Qual o número da transação que deseja editar: ").strip()
-                                if quit(choice):
-                                    return
-                                if not choice:
-                                    print("O campo não pode ficar vazio!")
-                                elif not re.fullmatch(r"[0-9]+", choice):
-                                    print("Digite somente números naturais!")
-                                elif int(choice) > len(trans_list) or int(choice) < 1:
-                                    print("Digite um dos números mostrados!")
-                                else:
-                                    break
-                            
-                            for i, trans in enumerate(trans_list):
-                                if i == (int(choice)-1):
-                                    print("-" * 30)
-                                    print(Transaction(
+                    if trans_exist:
+                        while True:
+                            idx_choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                            if _cancelled(idx_choice):
+                                return
+                            if not idx_choice:
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                            elif not re.fullmatch(r"[0-9]+", idx_choice):
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
+                            elif int(idx_choice) > len(trans_list) or int(idx_choice) < 1:
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
+                            else:
+                                break
+                        for i, trans in enumerate(trans_list):
+                            if i == (int(idx_choice)-1):
+                                RULE()
+                                print(Transaction(
                                     trans["type"],
                                     trans["value"],
                                     trans["category"],
                                     trans["description"],
                                     trans["date"]
-                                                ))
-                                    print("-" * 30)
-                                else:
-                                    new_trans.append(trans)
-                            
-                            while True:
-                                confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                                if quit(confimation):
-                                    return
-                                if not confimation:
-                                    print("O campo não pode ficar vazio!")
-                                elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                    print("Digite somente letras!")
-                                elif not (confimation == "S" or confimation == "N"):
-                                    print("Digite uma das opções dadas(S/N)")
-                                else:
-                                    break
-                            if confimation == "S":
+                                ))
+                                RULE()
+                            else:
+                                new_trans.append(trans)
+                        while True:
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                            if _cancelled(confimation):
+                                return
+                            if not confimation:
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                            elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
+                                ERROR("DIGITE SOMENTE LETRAS!")
+                            elif not (confimation == "S" or confimation == "N"):
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
+                            else:
                                 break
-                            elif confimation == "N":
-                                continue
-
-
+                        if confimation == "S":
+                            go_edit = True
+                            break
+                        elif confimation == "N":
+                            continue
+                if not go_edit:
+                    return
                 new_type = type_verf()
-                if quit(new_type):
+                if new_type in ("-1", None, ""):
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                new_value = value_verf(input("Digite o novo valor: "))
-                if quit(new_value):
+
+                raw_nv = ASK("DIGITE O NOVO VALOR:")
+                if _cancelled(raw_nv):
                     return
-                if new_type == "Receita":
-                    new_category = categorize_rev()
-                    if quit(new_category):
-                        return
-                elif new_type == "Despesa":
-                    new_category = categorize_exp()
-                    if quit(new_category):
-                        return
-                new_description = input("Digite a nova descrição: ")
-                if quit(new_description):
+                new_value = value_verf(raw_nv)
+
+                new_category = pick_category(new_type)
+                if new_category is None:
                     return
-                new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-                if quit(new_date):
+
+                new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+                if _cancelled(new_description):
                     return
-                trans = Transaction(new_type,new_value,new_category,new_description,new_date)
-                new_trans.append(trans.to_dict())  
-                
+
+                raw_nd = ASK("DIGITE A NOVA DATA:")
+                if _cancelled(raw_nd):
+                    return
+                new_date = date_verf(raw_nd)
+                trans = Transaction(new_type, new_value, new_category, new_description, new_date)
+                new_trans.append(trans.to_dict())
                 new_db(DB_PATH, new_trans)
 
         elif option == "2":
@@ -783,12 +762,14 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                 trans_list = []
                 new_trans = []
                 # Perguntas do intervalo personalizado
-                start_iso = date_verf(input("Digite a data INICIAL (YYYY-MM-DD): "))
-                if quit(start_iso):
+                raw_si = ASK("DIGITE A DATA INICIAL (YYYY-MM-DD):")
+                if _cancelled(raw_si):
                     return
-                end_iso = date_verf(input("Digite a data FINAL (YYYY-MM-DD): "))
-                if quit(end_iso):
+                start_iso = date_verf(raw_si)
+                raw_ei = ASK("DIGITE A DATA FINAL (YYYY-MM-DD):")
+                if _cancelled(raw_ei):
                     return
+                end_iso = date_verf(raw_ei)
 
                 # Converte para date para validar ordem e normalizar
                 start_date = datetime.date.fromisoformat(start_iso)
@@ -798,70 +779,58 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
                 if end_date < start_date:
                     start_date, end_date = end_date, start_date
                 
-                print("-" * 30)
-                print("")
+                RULE()
                 for trans in transactions:
-                    if (end_date >= datetime.date.fromisoformat(trans["date"]) >= start_date):
+                    if start_date <= datetime.date.fromisoformat(trans["date"]) <= end_date:
                         trans_list.append(trans)
                         trans_exist = True
-                        print(f"[{len(trans_list)}] ", end="")
-                        print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))  
-                        print("") 
-                            
                     else:
                         new_trans.append(trans)
-                if not trans_exist:
-                    print("Nenhuma transação encontrada\n")
-                print("-" * 30)
+
+                _list_with_table(trans_list)
+                RULE()
 
                 if not trans_exist:
                     continue
                 
                 if trans_exist == True:
                     while True:  
-                        choice = input("Qual o número da transação que deseja editar: ").strip()
-                        if quit(choice):
+                        choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA EDITAR:")
+                        if _cancelled(choice):
                             return
                         if not choice:
-                            print("O campo não pode ficar vazio!")
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                         elif not re.fullmatch(r"[0-9]+", choice):
-                            print("Digite somente números naturais!")
+                            ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                         elif int(choice) > len(trans_list) or int(choice) < 1:
-                            print("Digite um dos números mostrados!")
+                            ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                         else:
                             break
                     
                     for i, trans in enumerate(trans_list):
                         if i == (int(choice)-1):
-                            print("-" * 30)
+                            RULE()
                             print(Transaction(
-                            trans["type"],
-                            trans["value"],
-                            trans["category"],
-                            trans["description"],
-                            trans["date"]
-                                        ))
-                            print("-" * 30)
-                    
+                                trans["type"],
+                                trans["value"],
+                                trans["category"],
+                                trans["description"],
+                                trans["date"]
+                            ))
+                            RULE()
                         else:
                             new_trans.append(trans)
 
                     while True:
-                        confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                        if quit(confimation):
+                        confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA EDITAR [S/N]?").upper()
+                        if _cancelled(confimation):
                             return
                         if not confimation:
-                            print("O campo não pode ficar vazio!")
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                         elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                            print("Digite somente letras!")
+                            ERROR("DIGITE SOMENTE LETRAS!")
                         elif not (confimation == "S" or confimation == "N"):
-                            print("Digite uma das opções dadas(S/N)")
+                            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                         else:
                             break
                     if confimation == "S":
@@ -871,26 +840,27 @@ def edit_trans(): #aprofundar depois quando tiver beckup de cada dia, e separar 
 
 
             new_type = type_verf()
-            if quit(new_type):
+            if new_type in ("-1", None, ""):
+                WARN("OPERAÇÃO CANCELADA!")
                 return
-            new_value = value_verf(input("Digite o novo valor: "))
-            if quit(new_value):
+            raw_nv = ASK("DIGITE O NOVO VALOR:")
+            if _cancelled(raw_nv):
                 return
-            if new_type == "Receita":
-                new_category = categorize_rev()
-                if quit(new_category):
-                    return
-            elif new_type == "Despesa":
-                new_category = categorize_exp()
-                if quit(new_category):
-                    return
-            new_description = input("Digite a nova descrição: ")
-            if quit(new_description):
+            new_value = value_verf(raw_nv)
+
+            new_category = pick_category(new_type)
+            if new_category is None:
                 return
-            new_date = date_verf(input("Digite a nova data: "))#datetime.datetime.fromisoformat(input("Digite a nova data(YYYY-MM-DD): "))
-            if quit(new_date):
+
+            new_description = ASK("DIGITE A NOVA DESCRIÇÃO:")
+            if _cancelled(new_description):
                 return
-            trans = Transaction(new_type,new_value,new_category,new_description,new_date)
+
+            raw_nd = ASK("DIGITE A NOVA DATA:")
+            if _cancelled(raw_nd):
+                return
+            new_date = date_verf(raw_nd)
+            trans = Transaction(new_type, new_value, new_category, new_description, new_date)
             new_trans.append(trans.to_dict())
             
             new_db(DB_PATH, new_trans)           
@@ -899,29 +869,32 @@ def deleteone():
     transactions = db_confirm()
     if transactions is None:
         return
-    
+    HEADER("DELETAR UMA TRANSAÇÃO")
+ 
 
     while True:
-        choice = input("Como você deseja procurar sua transação? [1]Valor [2]Categoria [3]Data\nDigite: ")
-        if quit(choice):
+        choice = ASK("COMO VOCÊ DESEJA PROCURAR SUA TRANSAÇÃO? [1]VALOR [2]CATEGORIA [3]DATA")
+        if _cancelled(choice):
             return
         if not choice:
-            print("O campo não pode ficar vazio")
+            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
         elif not re.fullmatch(r"[0-9]+", choice):
-            print("Digite somente números naturais!")
+            ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
         elif (choice != "1") and (choice != "2") and (choice != "3"):
-            print("Digite uma das opções dadas(1/2/3)!")
+            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
         else:
             break
     if choice == "1":
             while True:
-                option = input("Pesquisar por: [1]Valor [2]Intervalo\nDigite: ")
+                option = ASK("PESQUISAR POR: [1]VALOR [2]INTERVALO")
+                if _cancelled(option):
+                    return
                 if not option:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", option):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (option != "1") and (option != "2"):
-                    print("Digite uma das opções dadas(1/2)!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break
             if option == "1":
@@ -929,173 +902,160 @@ def deleteone():
                     trans_list = []
                     trans_exist = False
                     new_trans = []
-                    value = value_verf(input("Digite o valor que queira procurar: "))
-                    if quit(value):
+                    raw = ASK("DIGITE O VALOR QUE QUEIRA PROCURAR:")
+                    if _cancelled(raw):
                         return
-                    print("-" * 30)
+                    value = value_verf(raw)
+                    if value == "-1":
+                        WARN("OPERAÇÃO CANCELADA!")
+                        return
+                    RULE()
                     print("")
                     for trans in transactions:
                         if trans["value"] == value:
                             trans_exist = True
                             trans_list.append(trans)
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                    )) 
-                            print("")
                         else:
                             new_trans.append(trans)
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                        
-                    print("-" * 30)  
 
+                    _list_with_table(trans_list)
                     if not trans_exist:
                         continue
                 
                     if trans_exist == True:
                         while True:  
-                            choice = input("Qual o número da transação que deseja deletar: ").strip()
-                            if quit(choice):
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                            if _cancelled(choice):
                                 return
                             if not choice:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                             elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                             else:
                                 break
-                        
-                        for i, trans in enumerate(trans_list):
-                            if i == (int(choice)-1):
-                                print("-" * 30)
-                                print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))
-                                print("-" * 30)
-                        
-                            else:
-                                new_trans.append(trans)
+                
+                    for i, trans in enumerate(trans_list):
+                        if i == (int(choice)-1):
+                            RULE()
+                            print(Transaction(
+                            trans["type"],
+                            trans["value"],
+                            trans["category"],
+                            trans["description"],
+                            trans["date"]
+                                        ))
+                            RULE()
+                    
+                        else:
+                            new_trans.append(trans)
 
-                        while True:
-                            confimation = input("Essa é a transação que você deseja editar[S/N]? ").strip().upper()
-                            if quit(confimation):
-                                return
-                            if not confimation:
-                                print("O campo não pode ficar vazio!")
-                            elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
-                            elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
-                            else:
-                                break
-                        if confimation == "S":
-                            new_db(DB_PATH, new_trans)
-                            print("Transção deletada!")
+                    while True:
+                        confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                        if _cancelled(confimation):
                             return
-                        elif confimation == "N":
-                            continue
+                        if not confimation:
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                        elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
+                            ERROR("DIGITE SOMENTE LETRAS!")
+                        elif not (confimation == "S" or confimation == "N"):
+                            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
+                        else:
+                            break
+                    if confimation == "S":
+                        new_db(DB_PATH, new_trans)
+                        OK("TRANSAÇÃO DELETADA!")
+                        return
+                    elif confimation == "N":
+                        continue
                     
             elif option == "2":  
                 while True:
                     trans_list = []
                     trans_exist = False
                     new_trans = []
-                    higher = value_verf_float(input("O valor é maior que: "))
-                    if quit(higher):
+                    raw_h = ASK("O VALOR É MAIOR QUE:")
+                    if _cancelled(raw_h):
                         return
-                    lower = value_verf_float(input("O valor é menor que: "))
-                    if quit(lower):
+                    higher = value_verf_float(raw_h)
+                    if higher == "-1":
+                        WARN("OPERAÇÃO CANCELADA!")
+                        return
+                    raw_l = ASK("O VALOR É MENOR QUE:")
+                    if _cancelled(raw_l):
+                        return
+                    lower = value_verf_float(raw_l)
+                    if lower == "-1":
+                        WARN("OPERAÇÃO CANCELADA!")
                         return
                     
                     if lower < higher:
                         lower, higher = higher, lower
 
                     if higher == lower:
-                        print("Digite valores diferentes!")
+                        ERROR("DIGITE VALORES DIFERENTES!")
                         continue
-                    print("-" * 30)  
+                    RULE()
                     print("")
                     for trans in transactions:
-                        val = trans["value"]
                         val = float(str(trans["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip())
                         if (val > higher) and (val < lower):
                             trans_exist = True
                             trans_list.append(trans)
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                    )) 
-                            print("")
                         else:
                             new_trans.append(trans)
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)  
 
+                    _list_with_table(trans_list)
                     if not trans_exist:
                         continue
                 
                     if trans_exist == True:
                         while True:  
-                            choice = input("Qual o número da transação que deseja deletar: ").strip()
-                            if quit(choice):
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                            if _cancelled(choice):
                                 return
                             if not choice:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                             elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                             else:
                                 break
-                        
-                        for i, trans in enumerate(trans_list):
-                            if i == (int(choice)-1):
-                                print("-" * 30)
-                                print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))
-                                print("-" * 30)
-                        
-                            else:
-                                new_trans.append(trans)
+                    
+                    for i, trans in enumerate(trans_list):
+                        if i == (int(choice)-1):
+                            RULE()
+                            print(Transaction(
+                            trans["type"],
+                            trans["value"],
+                            trans["category"],
+                            trans["description"],
+                            trans["date"]
+                                        ))
+                            RULE()
+                        else:
+                            new_trans.append(trans)
 
-                        while True:
-                            confimation = input("Essa é a transação que você deseja deletar[S/N]? ").strip().upper()
-                            if quit(confimation):
-                                return
-                            if not confimation:
-                                print("O campo não pode ficar vazio!")
-                            elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
-                            elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
-                            else:
-                                break
-                        if confimation == "S":
-                            print("Transação deletada!")
-                            new_db(DB_PATH, new_trans)
+                    while True:
+                        confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                        if _cancelled(confimation):
                             return
-                        elif confimation == "N":
-                            continue
+                        if not confimation:
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                        elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
+                            ERROR("DIGITE SOMENTE LETRAS!")
+                        elif not (confimation == "S" or confimation == "N"):
+                            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
+                        else:
+                            break
+                    if confimation == "S":
+                        OK("TRANSAÇÃO DELETADA!")
+                        new_db(DB_PATH, new_trans)
+                        return
+                    elif confimation == "N":
+                        continue
 
     elif choice == "2": #tem forma melhor de organizar/separar despesa e receita? aperfeicoar organizacao (cronologicamente)
         while True:
@@ -1117,18 +1077,18 @@ def deleteone():
                         print(f"[{len(cat_list)}] ", end="")
                         print(trans["category"])
             while True:
-                choice = input("De qual categoria você quer deletar as transações: ").strip()
-                if quit(choice):
+                choice = ASK("DE QUAL CATEGORIA VOCÊ QUER DELETAR AS TRANSAÇÕES:")
+                if _cancelled(choice):
                     return
                 if not choice:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", choice):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (int(choice) > len(cat_list)) or (int(choice) <= 0):
-                    print("Digite uma das opções dadas!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break   
-            print("-" * 30)
+            RULE()
             print("")
             for i, cat in enumerate(cat_list):
                 if i == (int(choice)-1):
@@ -1136,36 +1096,28 @@ def deleteone():
                         if trans["category"] == cat:
                             trans_list.append(trans)
                             trans_exist = True
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                            print("") 
                         else:
                             new_trans.append(trans)
 
-            print("-" * 30)
+            _list_with_table(trans_list)
+            RULE()
             if trans_exist == True:
                     while True:  
-                        choice = input("Qual o número da transação que deseja deletar: ").strip()
-                        if quit(choice):
+                        choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                        if _cancelled(choice):
                             return
                         if not choice:
-                            print("O campo não pode ficar vazio!")
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                         elif not re.fullmatch(r"[0-9]+", choice):
-                            print("Digite somente números naturais!")
+                            ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                         elif int(choice) > len(trans_list) or int(choice) < 1:
-                            print("Digite um dos números mostrados!")
+                            ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                         else:
                             break
                     
                     for i, trans in enumerate(trans_list):
                         if i == (int(choice)-1):
-                            print("-" * 30)
+                            RULE()
                             print(Transaction(
                             trans["type"],
                             trans["value"],
@@ -1173,52 +1125,54 @@ def deleteone():
                             trans["description"],
                             trans["date"]
                                         ))
-                            print("-" * 30)
+                            RULE()
 
                         else:
                             new_trans.append(trans)
                     
                     while True:
-                        confimation = input("Essa é a transação que você deseja deletar[S/N]? ").strip().upper()
-                        if quit(confimation):
+                        confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                        if _cancelled(confimation):
                             return
                         if not confimation:
-                            print("O campo não pode ficar vazio!")
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                         elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                            print("Digite somente letras!")
+                            ERROR("DIGITE SOMENTE LETRAS!")
                         elif not (confimation == "S" or confimation == "N"):
-                            print("Digite uma das opções dadas(S/N)")
+                            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                         else:
                             break
                     if confimation == "S":
-                            print("Transação deletada!")
-                            new_db(DB_PATH, new_trans)
-                            return
+                        OK("TRANSAÇÃO DELETADA!")
+                        new_db(DB_PATH, new_trans)
+                        return
                     elif confimation == "N":
                         continue
                  
     elif choice == "3":
         while True:
-            option = input("Pesquisar por: [1]Dia/Mês/Ano [2]Periodo personalizado\nDigite: ").strip()
+            option = ASK("PESQUISAR POR: [1]DIA/MÊS/ANO [2]PERÍODO PERSONALIZADO")
+            if _cancelled(option):
+                return
             if not option:
-                print("O campo não pode ficar vazio")
+                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
             elif not re.fullmatch(r"[0-9]+", option):
-                print("Digite somente números naturais!")
+                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
             elif (option != "1") and (option != "2"):
-                print("Digite uma das opções dadas!")
+                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
             else:
                 break
         if option == "1":
             while True:
-                type = input("[1]Dia [2]Mês [3]Ano\nDigite: ").strip()
-                if quit(type):
+                type = ASK("[1]DIA [2]MÊS [3]ANO")
+                if _cancelled(type):
                     return
                 if not type:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", type):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (type != "1") and (type != "2") and (type != "3"):
-                    print("Digite uma das opções dadas!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break
             if type == "1":
@@ -1226,51 +1180,38 @@ def deleteone():
                     trans_exist = False
                     trans_list = []
                     new_trans = []
-                    day = date_verf(input("Digite o dia específico que quer procurar(YYYY-MM-DD): "))
-                    if quit(day):
+                    raw_day = ASK("DIGITE O DIA ESPECÍFICO QUE QUER PROCURAR (YYYY-MM-DD):")
+                    if _cancelled(raw_day):
                         return
-                    print("-" * 30)
-                    print("")
+                    day = date_verf(raw_day)
+                    RULE()
                     for trans in transactions:
                         if trans["date"] == day:
                             trans_list.append(trans)
                             trans_exist = True
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                            print("") 
-                        
                         else:
                             new_trans.append(trans)
+                    _list_with_table(trans_list)
+                    RULE()
                     if not trans_exist:
-                        print("Nenhuma transação encontrada\n")
-                    print("-" * 30)
-
-                    if not trans_exist:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
                         continue
-                    
                     if trans_exist == True:
                         while True:  
-                            choice = input("Qual o número da transação que deseja deletar: ").strip()
-                            if quit(choice):
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                            if _cancelled(choice):
                                 return
                             if not choice:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                             elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                             else:
                                 break
-                        
                         for i, trans in enumerate(trans_list):
                             if i == (int(choice)-1):
-                                print("-" * 30)
+                                RULE()
                                 print(Transaction(
                                 trans["type"],
                                 trans["value"],
@@ -1278,25 +1219,23 @@ def deleteone():
                                 trans["description"],
                                 trans["date"]
                                             ))
-                                print("-" * 30)
-                        
+                                RULE()
                             else:
                                 new_trans.append(trans)
-
                         while True:
-                            confimation = input("Essa é a transação que você deseja deletar[S/N]? ").strip().upper()
-                            if quit(confimation):
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
                             if not confimation:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
+                                ERROR("DIGITE SOMENTE LETRAS!")
                             elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                             else:
                                 break
                         if confimation == "S":
-                            print("Transação deletada!")
+                            OK("TRANSAÇÃO DELETADA!")
                             new_db(DB_PATH, new_trans)
                             return
                         elif confimation == "N":
@@ -1308,15 +1247,16 @@ def deleteone():
                     year_exist = False
                     new_trans = []
                     trans_list = []
-                    choice_year = year_verf(input("Digite o ano que você quer ver os meses: ").strip())
-                    if quit(choice_year):
+                    raw_y = ASK("DIGITE O ANO QUE VOCÊ QUER VER OS MESES:")
+                    if _cancelled(raw_y):
                         return
-                    choice_mon = (month_verf(input("Digite o mês que você quer ver: "))).lstrip("0")
-                    if quit(choice_mon):
+                    choice_year = year_verf(raw_y)
+                    raw_m = ASK("DIGITE O MÊS QUE VOCÊ QUER VER:")
+                    if _cancelled(raw_m):
                         return
-                    
-                    print("-" * 30)
-                    print("")
+                    choice_mon = (month_verf(raw_m)).lstrip("0")
+                    RULE()
+                    rows = []
                     for trans in transactions:
                         year = datetime.datetime.fromisoformat(trans["date"]).year
                         if str(choice_year) == str(year):
@@ -1324,53 +1264,36 @@ def deleteone():
                             month = datetime.datetime.fromisoformat(trans["date"]).month
                             if str(choice_mon) == str(month):
                                 trans_exist = True
-                                trans_list.append(trans)
-                                print(f"[{len(trans_list)}] ", end="")
-                                print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                                print("") 
+                                rows.append(trans)
                             else:
                                 new_trans.append(trans)
                         else:
                             new_trans.append(trans)
-
+                    if year_exist and rows:
+                        trans_table(rows)
+                        trans_list = rows
                     if not year_exist:
-                        print("Nenhuma transação encontrada!\n")
-
-                    else:
-                        if not trans_exist:
-                            print("Nenhuma transação encontrada!\n")
-
-                    print("-" * 30)
-                    if not trans_exist:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
                         continue
-
-                    if not year_exist:
+                    elif not trans_exist:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
                         continue
-
-
                     if trans_exist == True:
                         while True:  
-                            choice = input("Qual o número da transação que deseja deletar: ").strip()
-                            if quit(choice):
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                            if _cancelled(choice):
                                 return
                             if not choice:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[0-9]+", choice):
-                                print("Digite somente números naturais!")
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                             elif int(choice) > len(trans_list) or int(choice) < 1:
-                                print("Digite um dos números mostrados!")
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                             else:
                                 break
-                        
                         for i, trans in enumerate(trans_list):
                             if i == (int(choice)-1):
-                                print("-" * 30)
+                                RULE()
                                 print(Transaction(
                                 trans["type"],
                                 trans["value"],
@@ -1378,25 +1301,23 @@ def deleteone():
                                 trans["description"],
                                 trans["date"]
                                             ))
-                                print("-" * 30)
-
+                                RULE()
                             else:
                                 new_trans.append(trans)
-
                         while True:
-                            confimation = input("Essa é a transação que você deseja deletar[S/N]? ").strip().upper()
-                            if quit(confimation):
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
                             if not confimation:
-                                print("O campo não pode ficar vazio!")
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                             elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                print("Digite somente letras!")
+                                ERROR("DIGITE SOMENTE LETRAS!")
                             elif not (confimation == "S" or confimation == "N"):
-                                print("Digite uma das opções dadas(S/N)")
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                             else:
                                 break
                         if confimation == "S":
-                            print("Transação deletada!")
+                            OK("TRANSAÇÃO DELETADA!")
                             new_db(DB_PATH, new_trans)
                             return
                         elif confimation == "N":
@@ -1407,81 +1328,67 @@ def deleteone():
                     trans_exist = False
                     trans_list = []
                     new_trans = []
-                    choice_year = year_verf(input("Digite o ano que você quer ver as transações: ").strip())
-                    print("-" * 30)
-                    print("")
+                    raw_y2 = ASK("DIGITE O ANO QUE VOCÊ QUER VER AS TRANSAÇÕES:")
+                    if _cancelled(raw_y2):
+                        return
+                    choice_year = year_verf(raw_y2)
+                    RULE()
                     for trans in transactions:
                         year = datetime.datetime.fromisoformat(trans["date"]).year
                         if str(choice_year) == str(year):
                             trans_list.append(trans)
                             trans_exist = True
-                            print(f"[{len(trans_list)}] ", end="")
-                            print(Transaction(
+                        else:
+                            new_trans.append(trans)
+                    _list_with_table(trans_list)
+                    RULE()
+                    if not trans_exist:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                        continue
+                    if trans_exist == True:
+                        while True:  
+                            choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                            if _cancelled(choice):
+                                return
+                            if not choice:
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                            elif not re.fullmatch(r"[0-9]+", choice):
+                                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
+                            elif int(choice) > len(trans_list) or int(choice) < 1:
+                                ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
+                            else:
+                                break
+                        for i, trans in enumerate(trans_list):
+                            if i == (int(choice)-1):
+                                RULE()
+                                print(Transaction(
                                 trans["type"],
                                 trans["value"],
                                 trans["category"],
                                 trans["description"],
                                 trans["date"]
-                                            ))  
-                            print("") 
-
-                        else:
-                            new_trans.append(trans)
-                    
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)
-                    if not trans_exist:
-                        continue
-
-
-                    if trans_exist == True:
-                            while True:  
-                                choice = input("Qual o número da transação que deseja deletar: ").strip()
-                                if quit(choice):
-                                    return
-                                if not choice:
-                                    print("O campo não pode ficar vazio!")
-                                elif not re.fullmatch(r"[0-9]+", choice):
-                                    print("Digite somente números naturais!")
-                                elif int(choice) > len(trans_list) or int(choice) < 1:
-                                    print("Digite um dos números mostrados!")
-                                else:
-                                    break
-                            
-                            for i, trans in enumerate(trans_list):
-                                if i == (int(choice)-1):
-                                    print("-" * 30)
-                                    print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))
-                                    print("-" * 30)
-                                else:
-                                    new_trans.append(trans)
-                            
-                            while True:
-                                confimation = input("Essa é a transação que você deseja deletar[S/N]? ").strip().upper()
-                                if quit(confimation):
-                                    return
-                                if not confimation:
-                                    print("O campo não pode ficar vazio!")
-                                elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                                    print("Digite somente letras!")
-                                elif not (confimation == "S" or confimation == "N"):
-                                    print("Digite uma das opções dadas(S/N)")
-                                else:
-                                    break
-                            if confimation == "S":
-                                print("Transação deletada!")
-                                new_db(DB_PATH, new_trans)
+                                            ))
+                                RULE()
+                            else:
+                                new_trans.append(trans)
+                        while True:
+                            confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                            if _cancelled(confimation):
                                 return
-                    
-                            elif confimation == "N":
-                                continue
+                            if not confimation:
+                                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
+                            elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
+                                ERROR("DIGITE SOMENTE LETRAS!")
+                            elif not (confimation == "S" or confimation == "N"):
+                                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
+                            else:
+                                break
+                        if confimation == "S":
+                            OK("TRANSAÇÃO DELETADA!")
+                            new_db(DB_PATH, new_trans)
+                            return
+                        elif confimation == "N":
+                            continue
 
         elif option == "2":
             while True:
@@ -1489,12 +1396,14 @@ def deleteone():
                 trans_list = []
                 new_trans = []
                 # Perguntas do intervalo personalizado
-                start_iso = date_verf(input("Digite a data INICIAL (YYYY-MM-DD): "))
-                if quit(start_iso):
+                raw_si = ASK("DIGITE A DATA INICIAL (YYYY-MM-DD):")
+                if _cancelled(raw_si):
                     return
-                end_iso = date_verf(input("Digite a data FINAL (YYYY-MM-DD): "))
-                if quit(end_iso):
+                start_iso = date_verf(raw_si)
+                raw_ei = ASK("DIGITE A DATA FINAL (YYYY-MM-DD):")
+                if _cancelled(raw_ei):
                     return
+                end_iso = date_verf(raw_ei)
 
                 # Converte para date para validar ordem e normalizar
                 start_date = datetime.date.fromisoformat(start_iso)
@@ -1504,48 +1413,34 @@ def deleteone():
                 if end_date < start_date:
                     start_date, end_date = end_date, start_date
                 
-                print("-" * 30)
-                print("")
+                RULE()
                 for trans in transactions:
                     if (end_date >= datetime.date.fromisoformat(trans["date"]) >= start_date):
                         trans_list.append(trans)
                         trans_exist = True
-                        print(f"[{len(trans_list)}] ", end="")
-                        print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))  
-                        print("") 
-                            
                     else:
                         new_trans.append(trans)
+                _list_with_table(trans_list)
+                RULE()
                 if not trans_exist:
-                    print("Nenhuma transação encontrada\n")
-                print("-" * 30)
-
-                if not trans_exist:
+                    WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
                     continue
-                
                 if trans_exist == True:
                     while True:  
-                        choice = input("Qual o número da transação que deseja deletar: ").strip()
-                        if quit(choice):
+                        choice = ASK("QUAL O NÚMERO DA TRANSAÇÃO QUE DESEJA DELETAR:")
+                        if _cancelled(choice):
                             return
                         if not choice:
-                            print("O campo não pode ficar vazio!")
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                         elif not re.fullmatch(r"[0-9]+", choice):
-                            print("Digite somente números naturais!")
+                            ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                         elif int(choice) > len(trans_list) or int(choice) < 1:
-                            print("Digite um dos números mostrados!")
+                            ERROR("DIGITE UM DOS NÚMEROS MOSTRADOS!")
                         else:
                             break
-                    
                     for i, trans in enumerate(trans_list):
                         if i == (int(choice)-1):
-                            print("-" * 30)
+                            RULE()
                             print(Transaction(
                             trans["type"],
                             trans["value"],
@@ -1553,27 +1448,25 @@ def deleteone():
                             trans["description"],
                             trans["date"]
                                         ))
-                            print("-" * 30)
-                    
+                            RULE()
                         else:
                             new_trans.append(trans)
-
                     while True:
-                        confimation = input("Essa é a transação que você deseja deletar[S/N]? ").strip().upper()
-                        if quit(confimation):
+                        confimation = ASK("ESSA É A TRANSAÇÃO QUE VOCÊ DESEJA DELETAR [S/N]?").upper()
+                        if _cancelled(confimation):
                             return
                         if not confimation:
-                            print("O campo não pode ficar vazio!")
+                            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                         elif not re.fullmatch(r"[A-Za-zÀ-ÿ\s]+", confimation):
-                            print("Digite somente letras!")
+                            ERROR("DIGITE SOMENTE LETRAS!")
                         elif not (confimation == "S" or confimation == "N"):
-                            print("Digite uma das opções dadas(S/N)")
+                            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                         else:
                             break
                     if confimation == "S":
-                            print("Transação deletada!")
-                            new_db(DB_PATH, new_trans)
-                            return
+                        OK("TRANSAÇÃO DELETADA!")
+                        new_db(DB_PATH, new_trans)
+                        return
                     elif confimation == "N":
                         continue
 
@@ -1583,75 +1476,75 @@ def deleteall():
         return
     
     while True:
-        confirm = input("Tem certeza que deseja deletar TODAS os transações [S]/[N]?").strip().upper()
-        if quit(confirm):
+        confirm = ASK("TEM CERTEZA QUE DESEJA DELETAR TODAS AS TRANSAÇÕES [S]/[N]?").upper()
+        if _cancelled(confirm):
             return
         if confirm == "S":
             trans_empty = []
             new_db(DB_PATH, trans_empty)
-            print("Transações deletadas!")
+            OK("TRANSAÇÕES DELETADAS!")
             break
         elif confirm == "N":
-            print("Nenhuma transação deletada!")
+            WARN("NENHUMA TRANSAÇÃO DELETADA!")
             break
         elif not confirm:
-            print("O campo não pode ficar vazio!")
+            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
         else:
-            print("Digite um caractere válido!")
+            ERROR("DIGITE UM CARACTERE VÁLIDO!")
        
 def find_trans():
     transactions = db_confirm()
     if transactions is None:
         return
+    HEADER("BUSCAR TRANSAÇÕES")
     cat_list = []
     trans_exist = False
     year_exist = False
     while True:
-        choice = input("Como você deseja procurar sua transação? [1]Valor [2]Categoria [3]Data\nDigite: ")
-        if quit(choice):
+        choice = ASK("COMO VOCÊ DESEJA PROCURAR SUA TRANSAÇÃO? [1]VALOR [2]CATEGORIA [3]DATA")
+        if _cancelled(choice):
             return
         if not choice:
-            print("O campo não pode ficar vazio")
+            ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
         elif not re.fullmatch(r"[0-9]+", choice):
-            print("Digite somente números naturais!")
+            ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
         elif (choice != "1") and (choice != "2") and (choice != "3"):
-            print("Digite uma das opções dadas(1/2/3)!")
+            ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
         else:
             break
     if choice == "1":
         while True:
-            option = input("Pesquisar por: [1]Valor [2]Intervalo\nDigite: ")
+            option = ASK("PESQUISAR POR: [1]VALOR [2]INTERVALO")
+            if _cancelled(option):
+                return
             if not option:
-                print("O campo não pode ficar vazio")
+                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
             elif not re.fullmatch(r"[0-9]+", option):
-                print("Digite somente números naturais!")
+                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
             elif (option != "1") and (option != "2"):
-                print("Digite uma das opções dadas(1/2)!")
+                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
             else:
                 break
         if option == "1":
             while True:
                 trans_list = []
                 trans_exist = False
-                value = value_verf(input("Digite o valor que queira procurar: "))
-                if quit(value):
+                raw = ASK("DIGITE O VALOR QUE QUEIRA PROCURAR:")
+                if _cancelled(raw):
                     return
-                print("-" * 30)
+                value = value_verf(raw)
+                if value == "-1":
+                    WARN("OPERAÇÃO CANCELADA!")
+                    return
+                RULE()
                 print("")
                 for trans in transactions:
                     if trans["value"] == value:
                         trans_exist = True
-                        print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                                )) 
-                        print("")
+                trans_table([t for t in transactions if t["value"] == value])
                 if not trans_exist:
-                    print("Nenhuma transação encontrada!\n")
-                print("-" * 30)  
+                    WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                RULE()
                 if trans_exist:
                     break
 
@@ -1659,30 +1552,32 @@ def find_trans():
             while True:
                 trans_list = []
                 trans_exist = False
-                higher = value_verf_float(input("O valor é maior que: "))
-                if quit(higher):
+                raw_h = ASK("O VALOR É MAIOR QUE:")
+                if _cancelled(raw_h):
                     return
-                lower = value_verf_float(input("O valor é menor que: "))
-                if quit(lower):
+                higher = value_verf_float(raw_h)
+                if higher == "-1":
+                    WARN("OPERAÇÃO CANCELADA!")
                     return
-                print("-" * 30)  
+                raw_l = ASK("O VALOR É MENOR QUE:")
+                if _cancelled(raw_l):
+                    return
+                lower = value_verf_float(raw_l)
+                if lower == "-1":
+                    WARN("OPERAÇÃO CANCELADA!")
+                    return
+                RULE()
                 print("")
                 for trans in transactions:
-                    trans["value"] = float(str(trans["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip())
-                    if (trans["value"] > higher) and (trans["value"] < lower):
+                    val = float(str(trans["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip())
+                    if (val > higher) and (val < lower):
                         trans_exist = True
-                        print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                                )) 
-                        print("")
-
+                rows = [t for t in transactions if float(str(t["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip()) > higher and float(str(t["value"]).replace("R$", "").replace(".", "").replace(",", ".").strip()) < lower]
+                if rows:
+                    trans_table(rows)
                 if not trans_exist:
-                    print("Nenhuma transação encontrada!\n")
-                print("-" * 30)  
+                    WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                RULE()
                 if trans_exist:
                     break
 
@@ -1704,194 +1599,148 @@ def find_trans():
                         print(f"[{len(cat_list)}] ", end="")
                         print(trans["category"])
             while True:
-                choice = input("De qual categoria você quer ver as transações: ").strip()
-                if quit(choice):
+                choice = ASK("DE QUAL CATEGORIA VOCÊ QUER VER AS TRANSAÇÕES:")
+                if _cancelled(choice):
                     return
                 if not choice:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", choice):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (int(choice) > len(cat_list)) or (int(choice) <= 0):
-                    print("Digite uma das opções dadas!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break   
-            print("-" * 30)
+            RULE()
             print("")
             for i, cat in enumerate(cat_list):
                 if i == (int(choice)-1):
-                    trans_exist = True
-                    for trans in transactions:
-                        if cat == trans["category"]:
-                                        print(Transaction(
-                                                trans["type"],
-                                                trans["value"],
-                                                trans["category"],
-                                                trans["description"],
-                                                trans["date"]
-                                                            ))  
-                                        print("") 
-                    
+                    rows = [t for t in transactions if t["category"] == cat]
+                    trans_exist = bool(rows)
+                    if rows:
+                        trans_table(rows)
             if not trans_exist:
-                print("Nenhuma transação encontrada!\n")
-            print("-" * 30)
+                WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+            RULE()
             if trans_exist:
                 break
             
     elif choice == "3":
         while True:
-            option = input("Pesquisar por: [1]Dia/Mês/Ano [2]Periodo personalizado\nDigite: ").strip()
+            option = ASK("PESQUISAR POR: [1]DIA/MÊS/ANO [2]PERÍODO PERSONALIZADO")
+            if _cancelled(option):
+                return
             if not option:
-                print("O campo não pode ficar vazio")
+                ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
             elif not re.fullmatch(r"[0-9]+", option):
-                print("Digite somente números naturais!")
+                ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
             elif (option != "1") and (option != "2"):
-                print("Digite uma das opções dadas!")
+                ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
             else:
                 break
         if option == "1":
             while True:
-                type = input("[1]Dia [2]Mês [3]Ano\nDigite: ").strip()
-                if quit(type):
+                type = ASK("[1]DIA [2]MÊS [3]ANO")
+                if _cancelled(type):
                     return
                 if not type:
-                    print("O campo não pode ficar vazio")
+                    ERROR("O CAMPO NÃO PODE FICAR VAZIO!")
                 elif not re.fullmatch(r"[0-9]+", type):
-                    print("Digite somente números naturais!")
+                    ERROR("DIGITE SOMENTE NÚMEROS NATURAIS!")
                 elif (type != "1") and (type != "2") and (type != "3"):
-                    print("Digite uma das opções dadas!")
+                    ERROR("DIGITE UMA DAS OPÇÕES DADAS!")
                 else:
                     break
             if type == "1":
                 while True:
-                    trans_list = []
-                    trans_exist = False
-                    day = date_verf(input("Digite o dia específico que quer procurar(YYYY-MM-DD): "))
-                    if quit(day):
+                    raw_day = ASK("DIGITE O DIA ESPECÍFICO QUE QUER PROCURAR (YYYY-MM-DD):")
+                    if _cancelled(raw_day):
                         return
-                    print("-" * 30)
-                    print("")
-                    for trans in transactions:
-                        if trans["date"] == day:
-                            trans_exist = True
-                            print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                            print("") 
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)
-                    if trans_exist:
+                    day = date_verf(raw_day)
+                    RULE()
+                    rows = [t for t in transactions if t["date"] == day]
+                    if rows:
+                        trans_table(rows)
                         break
+                    else:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                        RULE()
+                        continue
             elif type == "2":
                 while True:
-                    trans_list = []
-                    trans_exist = False
-                    choice_year = year_verf(input("Digite o ano que você quer ver os meses: ").strip())
-                    choice_mon = (month_verf(input("Digite o mês que você quer ver: "))).lstrip("0")
-                    
-                    print("-" * 30)
-                    print("")
+                    year_exist = False
+                    raw_y = ASK("DIGITE O ANO QUE VOCÊ QUER VER OS MESES:")
+                    if _cancelled(raw_y):
+                        return
+                    choice_year = year_verf(raw_y)
+                    raw_m = ASK("DIGITE O MÊS QUE VOCÊ QUER VER:")
+                    if _cancelled(raw_m):
+                        return
+                    choice_mon = (month_verf(raw_m)).lstrip("0")
+                    RULE()
+                    rows = []
                     for trans in transactions:
                         year = datetime.datetime.fromisoformat(trans["date"]).year
                         if str(choice_year) == str(year):
                             year_exist = True
                             month = datetime.datetime.fromisoformat(trans["date"]).month
                             if str(choice_mon) == (str(month)):
-                                trans_exist = True
-                                print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                                print("") 
-
+                                rows.append(trans)
                     if not year_exist:
-                        print("Nenhuma transação encontrada!\n")
-
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                    elif not rows:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
                     else:
-                        if not trans_exist:
-                            print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)
-                    if trans_exist:
+                        trans_table(rows)
                         break
+                    RULE()
+                    continue
             elif type == "3":
                 while True:
-                    trans_list = []
-                    trans_exist = False
-                    choice_year = year_verf(input("Digite o ano que você quer ver as transações: ").strip())
-                    print("-" * 30)
-                    print("")
+                    raw_y2 = ASK("DIGITE O ANO QUE VOCÊ QUER VER AS TRANSAÇÕES:")
+                    if _cancelled(raw_y2):
+                        return
+                    choice_year = year_verf(raw_y2)
+                    RULE()
+                    rows = []
                     for trans in transactions:
-                            year = datetime.datetime.fromisoformat(trans["date"]).year
-                            if str(choice_year) == str(year):
-                                trans_exist = True
-                                print(Transaction(
-                                    trans["type"],
-                                    trans["value"],
-                                    trans["category"],
-                                    trans["description"],
-                                    trans["date"]
-                                                ))  
-                                print("") 
-                    if not trans_exist:
-                        print("Nenhuma transação encontrada!\n")
-                    print("-" * 30)
-                    if trans_exist:
+                        year = datetime.datetime.fromisoformat(trans["date"]).year
+                        if str(choice_year) == str(year):
+                            rows.append(trans)
+                    if rows:
+                        trans_table(rows)
                         break
-
+                    else:
+                        WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                        RULE()
+                        continue
         elif option == "2":
             while True:
-                trans_exist = False
                 trans_list = []
-                # Perguntas do intervalo personalizado
-                start_iso = date_verf(input("Digite a data INICIAL (YYYY-MM-DD): "))
-                if quit(start_iso):
+                raw_si = ASK("DIGITE A DATA INICIAL (YYYY-MM-DD):")
+                if _cancelled(raw_si):
                     return
-                end_iso = date_verf(input("Digite a data FINAL (YYYY-MM-DD): "))
-                if quit(end_iso):
+                start_iso = date_verf(raw_si)
+                raw_ei = ASK("DIGITE A DATA FINAL (YYYY-MM-DD):")
+                if _cancelled(raw_ei):
                     return
-
-                # Converte para date para validar ordem e normalizar
+                end_iso = date_verf(raw_ei)
                 start_date = datetime.date.fromisoformat(start_iso)
                 end_date = datetime.date.fromisoformat(end_iso)
-
-                # Normaliza caso o usuário tenha invertido
                 if end_date < start_date:
                     start_date, end_date = end_date, start_date
-                
-                print("-" * 30)
-                print("")
+                RULE()
                 for trans in transactions:
                     if (end_date >= datetime.date.fromisoformat(trans["date"]) >= start_date):
                         trans_list.append(trans)
-                        trans_exist = True
-                        print(Transaction(
-                                trans["type"],
-                                trans["value"],
-                                trans["category"],
-                                trans["description"],
-                                trans["date"]
-                                            ))  
-                        print("") 
-                            
-                if not trans_exist:
-                    print("Nenhuma transação encontrada\n")
-                print("-" * 30)
-                if trans_exist:
-                    return
-                if not trans_exist:
+                if trans_list:
+                    trans_table(trans_list)
+                    break
+                else:
+                    WARN("NENHUMA TRANSAÇÃO ENCONTRADA!")
+                    RULE()
                     continue
-
+           
 def random():
-    """
-    Insere um conjunto de transações pré-definidas no financeiro.json.
-    """
     # 1. Definir a lista de transações fornecida pelo usuário
     transactions = [
      {
@@ -2039,4 +1888,4 @@ def random():
     # 4. Salvar tudo novamente usando new_db(DB_PATH, lista_atualizada)
     new_db(DB_PATH, transactions)
     # 5. Imprimir uma mensagem confirmando a geração
-    print("Transações de exemplo geradas e salvas em financeiro.json.")
+    OK("TRANSAÇÕES DE EXEMPLO GERADAS E SALVAS EM financeiro.json")
